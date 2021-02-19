@@ -1,0 +1,88 @@
+---
+title: "Canada and China's performance at the UN"
+author: "François-Philippe Dubé"
+date: "14/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+# Load libraries/project
+# devtools::install_github("dgrtwo/unvotes") # Run only once
+library(ProjectTemplate)
+load.project()
+
+# Define options
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.width=8, fig.height=6) 
+theme_set(theme_minimal()) # Set the theme for graphics
+```
+
+# Description et exploration visuelle des données
+Le paquet `un_votes` donne l'historique des votes à l'ONU des États-membres, en en donnant des précisions telles que les dates du vote, le descriptif du sujet, et l'enjeu qu'il couvre. Nous avons installé [la version de développement du paquet](https://github.com/dgrtwo/unvotes), plus complète que son équivalent CRAN, et qui s'étend de 1946 à 2019.
+
+Ces données proviennent du jeu de données original suivant:
+> Erik Voeten "Data and Analyses of Voting in the UN General Assembly" Routledge Handbook of International Organization, edited by Bob Reinalda (publié le 27 mai 2013), disponible à SSRN: http://ssrn.com/abstract=2111149.
+
+À noter que le jeu de données original est maintenu sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec son livre de codes expliquant les variables utilisées.
+
+Le paquet `unvotes` comprend trois jeux de données: 
+- `un_roll_calls`, décrivant les session de votes à l'ONU
+- `un_roll_call_issues`, identifiant un enjeu pour chacun des éléments faisant l'objet d'un vote, et
+- `unvotes`, décrivant comment chaque État-membre a voté (en faveur, contre, abstention) à chacun des votes.
+
+Chacun des ces jeux peut être joint aux autres par la colonne rcid (**roll call ID**). Voici les trois jeux.
+
+## un_roll_calls
+
+```{r}
+un_roll_calls %>% head(., 5) %>% kable()
+
+```
+*Nota: La variable `importantvote` de  `un_roll_call` correspond aux votes importants pour les É-U à partir de `r `min(un_roll_calls$date)`, et codé jusqu'à `r max(un_roll_calls$date)`.* Elle sera donc utile pour voir dans quelle mesure le Canada et la Chine s'éloignent des États-Unis sur des votes considérés importants pour le maintien de l'ordre mondial.
+
+## un_roll_call_issues
+```{r}
+un_roll_call_issues %>% sample_n(10) %>% kable()
+```
+La variable `issue` catégorise les votes selon les enjeux suivants: `r unique(un_roll_call_issues$issue)`
+
+## un_votes
+
+```{r}
+un_votes %>% sample_n(5) %>% kable()
+```
+
+## Consolidation des données
+Nous allons travailler sur un tableau consolidé.
+
+```{r}
+
+```
+
+
+# Exploratory Data Analysis
+## Characteristics of the dataset -- un_votes
+```{r eda}
+
+skimr::skim(completeVotes)
+```
+
+## Characteristics of the dataset -- 
+
+
+# Number of votes per year
+
+
+```{r}
+completeVotes %>% 
+  group_by(year) %>% 
+  distinct(rcid) %>% 
+  count(rcid) %>% 
+  summarize(nb_of_votes = sum(n)) %>% 
+  ggplot(aes(x = year, y = nb_of_votes)) +
+  geom_bar(stat = "identity")
+
+
+
+```
+
