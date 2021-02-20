@@ -6,83 +6,90 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
-# Load libraries/project
-# devtools::install_github("dgrtwo/unvotes") # Run only once
+# Charger les bibilothèques du projet
+# devtools::install_github("dgrtwo/unvotes") # À ne faire qu'une seule fois
 library(ProjectTemplate)
 load.project()
 
 # Define options
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(fig.width=8, fig.height=6) 
-theme_set(theme_minimal()) # Set the theme for graphics
+theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
+
+# Télécharger une base de données d'indicateurs de la Banque mondiale
+# new_cache <- wb_cache() # Ne faire qu'une seule fois
 ```
 
-# Description et exploration visuelle des données
+Description et exploration visuelle des données
+=================================================
+
 Le paquet `un_votes` donne l'historique des votes à l'ONU des États-membres, en en donnant des précisions telles que les dates du vote, le descriptif du sujet, et l'enjeu qu'il couvre. Nous avons installé [la version de développement du paquet](https://github.com/dgrtwo/unvotes), plus complète que son équivalent CRAN, et qui s'étend de 1946 à 2019.
 
 Ces données proviennent du jeu de données original suivant:
-> Erik Voeten "Data and Analyses of Voting in the UN General Assembly" Routledge Handbook of International Organization, edited by Bob Reinalda (publié le 27 mai 2013), disponible à SSRN: http://ssrn.com/abstract=2111149.
+
+> Erik Voeten "Data and Analyses of Voting in the UN General Assembly," *Routledge Handbook of International Organization*, edited by Bob Reinalda (publié le 27 mai 2013), disponible à SSRN: http://ssrn.com/abstract=2111149.
 
 À noter que le jeu de données original est maintenu sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec son livre de codes expliquant les variables utilisées.
 
 Le paquet `unvotes` comprend trois jeux de données: 
-- `un_roll_calls`, décrivant les session de votes à l'ONU
-- `un_roll_call_issues`, identifiant un enjeu pour chacun des éléments faisant l'objet d'un vote, et
-- `unvotes`, décrivant comment chaque État-membre a voté (en faveur, contre, abstention) à chacun des votes.
 
-Chacun des ces jeux peut être joint aux autres par la colonne rcid (**roll call ID**). Voici les trois jeux.
+* `un_roll_calls` décrit les session de votes à l'ONU. *Nota: La variable `importantvote` de  `un_roll_call` correspond aux votes importants pour les É-U à partir de `r min(un_roll_calls$date)`, et codé jusqu'à `r max(un_roll_calls$date)`.* Elle sera donc utile pour voir dans quelle mesure le Canada et la Chine s'éloignent des États-Unis sur des votes considérés importants pour le maintien de l'ordre mondial.
 
-## un_roll_calls
+* `un_roll_call_issues` identifie un enjeu pour chacun des éléments faisant l'objet d'un vote. Noter que la variable `issue` catégorise les votes selon les enjeux suivants: `r unique(un_roll_call_issues$issue)`.
 
-```{r}
-un_roll_calls %>% head(., 5) %>% kable()
+* `unvotes` décrit comment chaque État-membre a voté (en faveur, contre, abstention) à chacun des votes.
 
-```
-*Nota: La variable `importantvote` de  `un_roll_call` correspond aux votes importants pour les É-U à partir de `r `min(un_roll_calls$date)`, et codé jusqu'à `r max(un_roll_calls$date)`.* Elle sera donc utile pour voir dans quelle mesure le Canada et la Chine s'éloignent des États-Unis sur des votes considérés importants pour le maintien de l'ordre mondial.
+Chacun des ces jeux peut être joint aux autres par la colonne `rcid` (**roll call ID**). Nous allons travailler sur un tableau consolidé. Le tableau final fait En voici un extrait.
 
-## un_roll_call_issues
-```{r}
-un_roll_call_issues %>% sample_n(10) %>% kable()
-```
-La variable `issue` catégorise les votes selon les enjeux suivants: `r unique(un_roll_call_issues$issue)`
-
-## un_votes
-
-```{r}
-un_votes %>% sample_n(5) %>% kable()
+```{r consolidation, echo = TRUE}
+votes <- un_votes %>% right_join(., un_roll_calls, by = "rcid")
+votes <- votes %>% right_join(., un_roll_call_issues, by = "rcid")
+votes <- votes %>% select(-c(amend, para))
+votes <- votes[complete.cases(votes), ] # Petite perte de 6% des données.
+sample_n(votes, 3) %>% kable()
 ```
 
-## Consolidation des données
-Nous allons travailler sur un tableau consolidé.
+Définitions - Quelques groupes de pays
+======================================
 
-```{r}
+Pour l'analyse, nous allons définir certains groupements de pays: G7, G20, pays en développement (séparés en pays à revenus faibles ou moyens), Afrique sub-saharienne. Nous n'allons garder que les codes ISO à deux lettres pour simplifier les manipulations. Nous allons utiliser la base 
 
+```{r definitions_pays}
+
+g7 <- c("Canada", "France", "Germany", "Italy", "Japan", "United Kingdom", 
+        "United States") %>%
+  countrycode(., origin = "country.name", destination = "iso2c")
+
+g20 <- c("Argentina", "Australia", "Brazil", "Canada", 'China', "France", "Germany", "India", "Indonesia", "Italy", "Japan", "Mexico", "Netherlands", "Russia", "Saudi Arabia", "Singapore", "South Africa", "South Korea", "Spain", "Switzerland", "Turkey", "United Kingdom", "United States") %>% countrycode(., origin = "country.name", destination = "iso2c")
+
+# Pour l'Afrique sub-saharienne, on utilise la base de données du paquet countrycode
+afr <- countrycode::codelist_panel %>% 
+  filter(year == 2020 & region == "Sub-Saharan Africa" & !is.na(iso2c)) %>% 
+  pull(iso2c) # dplyr::pull permet de retourner un vecteur
+
+
+# Pour les pays en développement, on génère un tableau de la 
+# Banque mondiale et on en extrait les pays en développement
+
+# Tableau de données de tous les pays (il y en a 218)
+pays <- wb_countries() %>% 
+  filter(income_level != "Aggregates") %>% 
+  select(-c(capital_city, contains("_iso2c"), iso3c, contains("admin_")))
+
+# Les pays en développement
+dev <- pays %>% filter(income_level_iso3c != "HIC") %>% pull("iso2c")
+lic <- pays %>% filter(income_level_iso3c == "LIC") %>% pull("iso2c")
+lmic <- pays %>% filter(income_level_iso3c == "LMC") %>% pull("iso2c")
+umic <- pays %>% filter(income_level_iso3c == "UIC") %>% pull("iso2c")
 ```
 
 
-# Exploratory Data Analysis
-## Characteristics of the dataset -- un_votes
-```{r eda}
 
-skimr::skim(completeVotes)
-```
+Analyse - Partie 1: Évolution des positions à l'ONU 
+====================================================
 
-## Characteristics of the dataset -- 
-
-
-# Number of votes per year
-
-
-```{r}
-completeVotes %>% 
-  group_by(year) %>% 
-  distinct(rcid) %>% 
-  count(rcid) %>% 
-  summarize(nb_of_votes = sum(n)) %>% 
-  ggplot(aes(x = year, y = nb_of_votes)) +
-  geom_bar(stat = "identity")
-
-
+```{r positions_can_us_zh}
 
 ```
+
 
