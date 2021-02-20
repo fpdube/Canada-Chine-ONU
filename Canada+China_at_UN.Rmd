@@ -7,7 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE, echo=FALSE}
 # Charger les bibilothèques du projet
-# devtools::install_github("dgrtwo/unvotes") # À ne faire qu'une seule fois
+# devtools::install_github("dgrtwo/unvotes") # Ne faire qu'une seule fois
+download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
+load("./data/onu_votes.RData")
 library(ProjectTemplate)
 load.project()
 
@@ -18,6 +20,7 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 
 # Télécharger une base de données d'indicateurs de la Banque mondiale
 # new_cache <- wb_cache() # Ne faire qu'une seule fois
+# cache("new_cache") # Ne faire qu'une seule fois
 ```
 
 Description et exploration visuelle des données
@@ -85,10 +88,22 @@ umic <- pays %>% filter(income_level_iso3c == "UIC") %>% pull("iso2c")
 
 
 
-Analyse - Partie 1: Évolution des positions à l'ONU 
-====================================================
+Analyse - Partie 1: Évolution de la position du Canada à l'ONU 
+==============================================================
 
-```{r positions_can_us_zh}
+```{r position_can_us_zh}
+# votes %>% 
+#   filter(country_code %in% c(g7, "zh") %>% 
+#            group_by(year = year(year), country_code) %>% 
+#            summarize(prop_oui = mean(vote == "yes"))
+
+votes %>% 
+  group_by(year = year(date), country) %>%
+  filter(country_code %in% c("CA", "US", "ZH") & year > 1989) %>% 
+  summarize(percent_yes = mean(vote == "yes")) %>%
+  ggplot(mapping = aes(x = year, y = percent_yes, color = country)) +
+    geom_line() +
+    ylab("% of votes that are 'Yes'")
 
 ```
 
