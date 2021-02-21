@@ -8,8 +8,6 @@ output: html_document
 ```{r setup, include=FALSE, echo=FALSE}
 # Charger les bibilothèques du projet
 # devtools::install_github("dgrtwo/unvotes") # Ne faire qu'une seule fois
-download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
-load("./data/onu_votes.RData")
 library(ProjectTemplate)
 load.project()
 
@@ -51,6 +49,41 @@ votes <- votes %>% select(-c(amend, para))
 votes <- votes[complete.cases(votes), ] # Petite perte de 6% des données.
 sample_n(votes, 3) %>% kable()
 ```
+
+Alternative: Utilisation du jeu de données récent et complet de Erik Voeten
+============================================================================
+Le chercheur Erik Voeten maintien une version plus à jour des données sur le dataverse de l'Université Harvard. À l'heure actuelle, celles-ci vont jusqu'à 2019. Le codage de la base de données est un peu différent, cependant, puisque les variables factorielles (notamment la catégorisation des résolutions en six enjeux) sont codées sous forme de variables instrumentales. Deux différences importantes par rapport à la base de données du CRAN: plusieurs résolutions ne sont associées à aucun enjeux, et plusieurs enjeux peuvent être associés à une même résolution.  
+
+```{r manip_complete_votes}
+# Télécharger la base de données -- ne faire qu'une seule fois
+# download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
+# load("./data/onu_votes.RData")
+
+# Recoder certaines valeurs et renommer les variables d'enjeux et de pays
+onu <- completeVotes %>% 
+  mutate(vote_long = factor(vote, labels = c("Pour", "Abstention", "Contre", "Absent", "Non membre"))) %>% 
+  rename(moyen_orient = me, 
+         nucleaire = nu, 
+         desarmement = di, 
+         droit_pers = hr, 
+         colonialisme = co, 
+         dev_econ = ec, 
+         pays = Country, 
+         pays_long = Countryname) %>% 
+  # Reformater le tableau
+  select(resid, member, vote, vote_long, year, importantvote, short, descr, moyen_orient, nucleaire, 
+         desarmement, droit_pers, colonialisme, dev_econ, everything())
+
+
+```
+
+
+
+
+
+
+
+
 
 Définitions - Quelques groupes de pays
 ======================================
