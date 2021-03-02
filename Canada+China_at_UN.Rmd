@@ -9,7 +9,7 @@ output: html_document
 # Charger les bibilothèques du projet
 # devtools::install_github("dgrtwo/unvotes") # Ne faire qu'une seule fois
 library(ProjectTemplate)
-load.project()
+load.project() # Intègre toutes les définitions de bibliothèques de cette analyse
 
 # Define options
 knitr::opts_chunk$set(echo = FALSE)
@@ -52,7 +52,11 @@ sample_n(votes, 3) %>% kable()
 
 Alternative: Utilisation du jeu de données récent et complet de Erik Voeten
 ============================================================================
-Le chercheur Erik Voeten maintien une version plus à jour des données sur le dataverse de l'Université Harvard. À l'heure actuelle, celles-ci vont jusqu'à 2019. Le codage de la base de données est un peu différent, cependant, puisque les variables factorielles (notamment la catégorisation des résolutions en six enjeux) sont codées sous forme de variables instrumentales. Deux différences importantes par rapport à la base de données du CRAN: plusieurs résolutions ne sont associées à aucun enjeux, et plusieurs enjeux peuvent être associés à une même résolution.  
+Le chercheur Erik Voeten maintien une version plus à jour des données sur le dataverse de l'Université Harvard. À l'heure actuelle, celles-ci vont jusqu'à 2019. Le codage de la base de données est un peu différent, cependant, puisque les variables factorielles (notamment la catégorisation des résolutions en six enjeux) sont codées sous forme de variables instrumentales. Deux différences importantes par rapport à la base de données du CRAN: 
+
+- plusieurs résolutions ne sont associées à aucun enjeux -- on ne "force" pas les résolutions à entrer dans les enjeux prédéfinis; et 
+
+- plusieurs enjeux peuvent être associés à une même résolution. 
 
 ```{r manip_complete_votes}
 # Télécharger la base de données -- ne faire qu'une seule fois
@@ -79,44 +83,36 @@ onu <- completeVotes %>%
 
 
 
-
-
-
-
-
-
 Définitions - Quelques groupes de pays
 ======================================
 
 Pour l'analyse, nous allons définir certains groupements de pays: G7, G20, pays en développement (séparés en pays à revenus faibles ou moyens), Afrique sub-saharienne. Nous n'allons garder que les codes ISO à deux lettres pour simplifier les manipulations. Nous allons utiliser la base 
 
 ```{r definitions_pays}
+# Dans cette section, on crée des "vecteurs" contenant différents regroupements de pays
 
 g7 <- c("Canada", "France", "Germany", "Italy", "Japan", "United Kingdom", 
         "United States") %>%
-  countrycode(., origin = "country.name", destination = "iso2c")
+  countrycode(., origin = "country.name", destination = "iso3c")
 
-g20 <- c("Argentina", "Australia", "Brazil", "Canada", 'China', "France", "Germany", "India", "Indonesia", "Italy", "Japan", "Mexico", "Netherlands", "Russia", "Saudi Arabia", "Singapore", "South Africa", "South Korea", "Spain", "Switzerland", "Turkey", "United Kingdom", "United States") %>% countrycode(., origin = "country.name", destination = "iso2c")
+g20 <- c("Argentina", "Australia", "Brazil", "Canada", 'China', "France", "Germany", "India", "Indonesia", "Italy", "Japan", "Mexico", "Netherlands", "Russia", "Saudi Arabia", "Singapore", "South Africa", "South Korea", "Spain", "Switzerland", "Turkey", "United Kingdom", "United States") %>% countrycode(., origin = "country.name", destination = "iso3c")
 
 # Pour l'Afrique sub-saharienne, on utilise la base de données du paquet countrycode
 afr <- countrycode::codelist_panel %>% 
-  filter(year == 2020 & region == "Sub-Saharan Africa" & !is.na(iso2c)) %>% 
-  pull(iso2c) # dplyr::pull permet de retourner un vecteur
-
+  filter(year == 2020 & region == "Sub-Saharan Africa" & !is.na(iso3c)) %>% 
+  pull(iso3c) # dplyr::pull permet de retourner un vecteur
 
 # Pour les pays en développement, on génère un tableau de la 
-# Banque mondiale et on en extrait les pays en développement
-
-# Tableau de données de tous les pays (il y en a 218)
+# Banque mondiale et on en extrait les pays en développement (il y en a 218)
 pays <- wb_countries() %>% 
   filter(income_level != "Aggregates") %>% 
-  select(-c(capital_city, contains("_iso2c"), iso3c, contains("admin_")))
-
-# Les pays en développement
-dev <- pays %>% filter(income_level_iso3c != "HIC") %>% pull("iso2c")
-lic <- pays %>% filter(income_level_iso3c == "LIC") %>% pull("iso2c")
-lmic <- pays %>% filter(income_level_iso3c == "LMC") %>% pull("iso2c")
-umic <- pays %>% filter(income_level_iso3c == "UIC") %>% pull("iso2c")
+  select(-c(capital_city, contains("_iso2c"), contains("admin_")))
+  
+# Les pays en développement -- on en fait des vecteurs
+dev <- pays %>% filter(income_level_iso3c != "HIC") %>% pull("iso3c")
+lic <- pays %>% filter(income_level_iso3c == "LIC") %>% pull("iso3c")
+lmic <- pays %>% filter(income_level_iso3c == "LMC") %>% pull("iso3c")
+umic <- pays %>% filter(income_level_iso3c == "UIC") %>% pull("iso3c")
 ```
 
 
@@ -124,20 +120,28 @@ umic <- pays %>% filter(income_level_iso3c == "UIC") %>% pull("iso2c")
 Analyse - Partie 1: Évolution de la position du Canada à l'ONU 
 ==============================================================
 
+Comme on peut le voir ci-dessous, tous enjeux confondus, le Canada vote de manière plus conservatrice que presque tous les pays du G7 à l'ONU, à l'exception des États-Unis. La Chine vote en faveur des résolutions de l'AGNU beaucoup plus fréquemment que les pays du G7.
+
 ```{r position_can_us_zh}
 # votes %>% 
 #   filter(country_code %in% c(g7, "zh") %>% 
 #            group_by(year = year(year), country_code) %>% 
 #            summarize(prop_oui = mean(vote == "yes"))
 
-votes %>% 
-  group_by(year = year(date), country) %>%
-  filter(country_code %in% c("CA", "US", "ZH") & year > 1989) %>% 
-  summarize(percent_yes = mean(vote == "yes")) %>%
-  ggplot(mapping = aes(x = year, y = percent_yes, color = country)) +
+onu %>% 
+  group_by(year = year(date), pays) %>%
+  filter(pays %in% c(g7, "CHN") & year > 1989 & member == 1) %>% 
+  mutate(percent_yes = mean(vote_long == "Pour")) %>% View()
+  ggplot(mapping = aes(x = year, y = percent_yes, color = pays)) +
     geom_line() +
-    ylab("% of votes that are 'Yes'")
+    ylab("proportion des votes 'en faveur'") +
+  xlab("année") +
+  ggtitle("La Chine vote plus souvent en faveur des résolutions de l'AGNU que les pays du G7.", 
+          "Le Canada est significativement plus consverateur à l'ONU que les autres pays du G7.")
 
 ```
+
+Cette situation change-t-elle en fonction des enjeux?
+
 
 
