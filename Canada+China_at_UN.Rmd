@@ -58,13 +58,18 @@ Le chercheur Erik Voeten maintien une version plus à jour des données sur le d
 
 - plusieurs enjeux peuvent être associés à une même résolution. 
 
+Voici un échantillon du tableau `onu_large`. On y a créé un enjeux "autre" pour identifier les situations où une résolution n'entre dans aucune autre catégorie.
+
 ```{r manip_complete_votes}
 # Télécharger la base de données -- ne faire qu'une seule fois
 # download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
 # load("./data/onu_votes.RData")
 
+# Pour passer les enjeux en boucle, on va transformer le jeu de données onu en format "long"
+enjeux <- c("moyen_orient", "nucleaire", "desarmement","droit_pers", "colonialisme", "dev_econ")
+
 # Recoder certaines valeurs et renommer les variables d'enjeux et de pays
-onu <- completeVotes %>% 
+onu_large <- completeVotes %>% 
   mutate(vote_long = factor(vote, labels = c("Pour", "Abstention", "Contre", "Absent", "Non membre"))) %>% 
   rename(moyen_orient = me, 
          nucleaire = nu, 
@@ -74,19 +79,43 @@ onu <- completeVotes %>%
          dev_econ = ec, 
          pays = Country, 
          pays_long = Countryname) %>% 
+  
+  # On ajoute un enjeu "autre" 
+  mutate(nb_enjeux = (moyen_orient + 
+                     nucleaire +
+                     desarmement +
+                     droit_pers +
+                     colonialisme +
+                     dev_econ), 
+         autre = if_else(nb_enjeux == 0, 1, 0)) %>% 
+
   # Reformater le tableau
   select(resid, member, vote, vote_long, year, importantvote, short, descr, moyen_orient, nucleaire, 
-         desarmement, droit_pers, colonialisme, dev_econ, everything())
+         desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux, -rcid, everything())
 
+slice_sample(onu_large, n = 3) %>% kable()
+```
+
+Le tableau a une taille `r dim(onu_large)` rangées x colonnes.
+
+On reformule le tableau `onu_large` au long (`onu`). 
+```{r onu_long}
+
+onu <- onu_large %>% 
+  pivot_longer(cols = c(enjeux, autre), names_to = "enjeux", values_to = "valeur") %>% 
+  filter(valeur == 1) %>% select(-valeur)
+
+onu %>% slice_sample(n = 3) %>% kable()
 
 ```
 
+Le tableau `onu`fait maintenant `r dim(onu)` lignes x colonnes.
 
 
 Définitions - Quelques groupes de pays
 ======================================
 
-Pour l'analyse, nous allons définir certains groupements de pays: G7, G20, pays en développement (séparés en pays à revenus faibles ou moyens), Afrique sub-saharienne. Nous n'allons garder que les codes ISO à deux lettres pour simplifier les manipulations. Nous allons utiliser la base 
+Pour l'analyse, nous allons définir certains groupements de pays: G7, G20, pays en développement (séparés en pays à revenus faibles ou moyens), Afrique subsaharienne.
 
 ```{r definitions_pays}
 # Dans cette section, on crée des "vecteurs" contenant différents regroupements de pays
@@ -116,7 +145,6 @@ umic <- pays %>% filter(income_level_iso3c == "UIC") %>% pull("iso3c")
 ```
 
 
-
 Analyse - Partie 1: Évolution de la position du Canada à l'ONU 
 ==============================================================
 
@@ -128,20 +156,25 @@ Comme on peut le voir ci-dessous, tous enjeux confondus, le Canada vote de mani�
 #            group_by(year = year(year), country_code) %>% 
 #            summarize(prop_oui = mean(vote == "yes"))
 
-onu %>% 
-  group_by(year = year(date), pays) %>%
-  filter(pays %in% c(g7, "CHN") & year > 1989 & member == 1) %>% 
-  mutate(percent_yes = mean(vote_long == "Pour")) %>% View()
-  ggplot(mapping = aes(x = year, y = percent_yes, color = pays)) +
-    geom_line() +
-    ylab("proportion des votes 'en faveur'") +
-  xlab("année") +
-  ggtitle("La Chine vote plus souvent en faveur des résolutions de l'AGNU que les pays du G7.", 
-          "Le Canada est significativement plus consverateur à l'ONU que les autres pays du G7.")
+# onu %>% 
+#   group_by(year = year(date), pays) %>%
+#   filter(pays %in% c(g7, "CHN") & year > 1989 & member == 1) %>% 
+#   mutate(percent_yes = mean(vote_long == "Pour")) %>% View()
+#   ggplot(mapping = aes(x = year, y = percent_yes, color = pays)) +
+#     geom_line() +
+#     ylab("proportion des votes 'en faveur'") +
+#   xlab("année") +
+#   ggtitle("La Chine vote plus souvent en faveur des résolutions de l'AGNU que les pays du G7.", 
+#           "Le Canada est significativement plus consverateur à l'ONU que les autres pays du G7.")
 
 ```
 
 Cette situation change-t-elle en fonction des enjeux?
 
+```{r}
+
+
+
+```
 
 
