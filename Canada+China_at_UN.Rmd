@@ -13,7 +13,7 @@ load.project() # Intègre toutes les définitions de bibliothèques de cette ana
 
 # Define options
 knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_chunk$set(fig.width=8, fig.height=6) 
+knitr::opts_chunk$set(fig.width=8, fig.height=8) 
 theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 
 # Télécharger une base de données d'indicateurs de la Banque mondiale
@@ -24,41 +24,26 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 Description et exploration visuelle des données
 =================================================
 
-Le paquet `un_votes` donne l'historique des votes à l'ONU des États-membres, en en donnant des précisions telles que les dates du vote, le descriptif du sujet, et l'enjeu qu'il couvre. Nous avons installé [la version de développement du paquet](https://github.com/dgrtwo/unvotes), plus complète que son équivalent CRAN, et qui s'étend de 1946 à 2019.
-
-Ces données proviennent du jeu de données original suivant:
+Le chercheur Erik Voeten maintien une base de données des votes à l'Assemblée générale des Nations Unies (AGNU).  
 
 > Erik Voeten "Data and Analyses of Voting in the UN General Assembly," *Routledge Handbook of International Organization*, edited by Bob Reinalda (publié le 27 mai 2013), disponible à SSRN: http://ssrn.com/abstract=2111149.
 
-À noter que le jeu de données original est maintenu sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec son livre de codes expliquant les variables utilisées.
+Cette base de données est présevée sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec le livre de codes associé expliquant les variables utilisées.
 
-Le paquet `unvotes` comprend trois jeux de données: 
+Chaque résolution est associée à un ou plusieurs enjeux particuliers:
 
-* `un_roll_calls` décrit les session de votes à l'ONU. *Nota: La variable `importantvote` de  `un_roll_call` correspond aux votes importants pour les É-U à partir de `r min(un_roll_calls$date)`, et codé jusqu'à `r max(un_roll_calls$date)`.* Elle sera donc utile pour voir dans quelle mesure le Canada et la Chine s'éloignent des États-Unis sur des votes considérés importants pour le maintien de l'ordre mondial.
+- Moyen-Orient
+- Nucléaire
+- Désarmement
+- Droits de la personne
+- Colonialisme
+- Développement économique
 
-* `un_roll_call_issues` identifie un enjeu pour chacun des éléments faisant l'objet d'un vote. Noter que la variable `issue` catégorise les votes selon les enjeux suivants: `r unique(un_roll_call_issues$issue)`.
+Nous y avons rajouté une septième catégorie, "Autre", pour identifier les résolutions n'entrant dans aucune des catégories ci-dessus. 
 
-* `unvotes` décrit comment chaque État-membre a voté (en faveur, contre, abstention) à chacun des votes.
+> *À Noter*: Le paquet **R** `un_votes` sur le dépôt du CRAN a été tiré d'une version antérieure cette base de données. Nous lui avons préféré la base de données du dépôt de Harvard, et ce, en dépit du fait qu'elle requiert plus de manipulations, pour deux raisons. D'abord, elle est plus à jour et couvre jusqu'à 2019 (alors que celle du paquet ne couvre que jusqu'à 2015). Ensuite, le codage des enjeux a été fait différemment, permettant la possibilité qu'une résolution couvre plus qu'un enjeu ou qu'elle n'en couvre aucun -- ce qui est plus réaliste.
 
-Chacun des ces jeux peut être joint aux autres par la colonne `rcid` (**roll call ID**). Nous allons travailler sur un tableau consolidé. Le tableau final fait En voici un extrait.
-
-```{r consolidation, echo = TRUE}
-votes <- un_votes %>% right_join(., un_roll_calls, by = "rcid")
-votes <- votes %>% right_join(., un_roll_call_issues, by = "rcid")
-votes <- votes %>% select(-c(amend, para))
-votes <- votes[complete.cases(votes), ] # Petite perte de 6% des données.
-sample_n(votes, 3) %>% kable()
-```
-
-Alternative: Utilisation du jeu de données récent et complet de Erik Voeten
-============================================================================
-Le chercheur Erik Voeten maintien une version plus à jour des données sur le dataverse de l'Université Harvard. À l'heure actuelle, celles-ci vont jusqu'à 2019. Le codage de la base de données est un peu différent, cependant, puisque les variables factorielles (notamment la catégorisation des résolutions en six enjeux) sont codées sous forme de variables instrumentales. Deux différences importantes par rapport à la base de données du CRAN: 
-
-- plusieurs résolutions ne sont associées à aucun enjeux -- on ne "force" pas les résolutions à entrer dans les enjeux prédéfinis; et 
-
-- plusieurs enjeux peuvent être associés à une même résolution. 
-
-Voici un échantillon du tableau `onu_large`. On y a créé un enjeux "autre" pour identifier les situations où une résolution n'entre dans aucune autre catégorie.
+Voici un échantillon du tableau `onu_large`. 
 
 ```{r manip_complete_votes}
 # Télécharger la base de données -- ne faire qu'une seule fois
@@ -66,7 +51,6 @@ Voici un échantillon du tableau `onu_large`. On y a créé un enjeux "autre" po
 # load("./data/onu_votes.RData")
 
 # Pour passer les enjeux en boucle, on va transformer le jeu de données onu en format "long"
-enjeux <- c("moyen_orient", "nucleaire", "desarmement","droit_pers", "colonialisme", "dev_econ")
 
 # Recoder certaines valeurs et renommer les variables d'enjeux et de pays
 onu_large <- completeVotes %>% 
@@ -88,28 +72,54 @@ onu_large <- completeVotes %>%
                      colonialisme +
                      dev_econ), 
          autre = if_else(nb_enjeux == 0, 1, 0)) %>% 
+  
+  # On enlève les "votes" des non-membres et les résolutions identiques (3%)
+  filter(vote != 9 & ident == 0) %>% 
+  
+  # On mesure la proportion de votes "en faveur" des résolutions de l'AGNU tous
+  # enjeux confondus par pays par année.
+   group_by(year = year(date), pays) %>% 
+  mutate(prop_oui = mean(vote_long == "Pour")) %>%
+  ungroup() %>% 
 
-  # Reformater le tableau
-  select(resid, member, vote, vote_long, year, importantvote, short, descr, moyen_orient, nucleaire, 
-         desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux, -rcid, everything())
-
-slice_sample(onu_large, n = 3) %>% kable()
+  # On reformate le tableau le tableau en y enlevant les variables redondantes
+  select(resid, vote, vote_long, year, prop_oui, importantvote, short, descr, moyen_orient, nucleaire, 
+         desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux, 
+         everything(),
+         -rcid, -amend, -member, -ccode, -ident) 
+  
 ```
 
-Le tableau a une taille `r dim(onu_large)` rangées x colonnes.
+Le tableau fait maintenant `r dim(onu_large)[1]` rangées par  `r dim(onu_large)[2]` colonnes.
 
-On reformule le tableau `onu_large` au long (`onu`). 
+On en fait également une autre version, plus compacte, décrivant les enjeux au format long (`onu`). 
 ```{r onu_long}
 
+# Définition des enjeux: on va les passer en boucle
+enjeux <- tibble(court = c("autre", 
+                           "colonialisme", 
+                           "desarmement", 
+                           "dev_econ", 
+                           "droit_pers", 
+                           "moyen_orient", 
+                           "nucleaire"), 
+  long = c("Autre", 
+           "Colonialisme", 
+           "Désarmement", 
+           "Développement économique", 
+           "Droits de la personne", 
+           "Moyen-Orient", 
+           "Nucléaire"))
+
+
+
 onu <- onu_large %>% 
-  pivot_longer(cols = c(enjeux, autre), names_to = "enjeux", values_to = "valeur") %>% 
-  filter(valeur == 1) %>% select(-valeur)
+  pivot_longer(cols = all_of(enjeux[[1]]), names_to = "enjeux", values_to = "valeur") %>% 
+  filter(valeur == 1) %>% select(resid, year, enjeux, pays, pays_long, everything(), -valeur)
 
 onu %>% slice_sample(n = 3) %>% kable()
 
 ```
-
-Le tableau `onu`fait maintenant `r dim(onu)` lignes x colonnes.
 
 
 Définitions - Quelques groupes de pays
@@ -148,33 +158,74 @@ umic <- pays %>% filter(income_level_iso3c == "UIC") %>% pull("iso3c")
 Analyse - Partie 1: Évolution de la position du Canada à l'ONU 
 ==============================================================
 
-Comme on peut le voir ci-dessous, tous enjeux confondus, le Canada vote de manière plus conservatrice que presque tous les pays du G7 à l'ONU, à l'exception des États-Unis. La Chine vote en faveur des résolutions de l'AGNU beaucoup plus fréquemment que les pays du G7.
+Comme on peut le voir ci-dessous, *tous enjeux confondus*, le Canada vote de manière plus conservatrice que presque tous les pays du G7 à l'ONU, à l'exception des États-Unis. La Chine vote en faveur des résolutions de l'AGNU beaucoup plus fréquemment que les pays du G7.
 
-```{r position_can_us_zh}
-# votes %>% 
-#   filter(country_code %in% c(g7, "zh") %>% 
-#            group_by(year = year(year), country_code) %>% 
-#            summarize(prop_oui = mean(vote == "yes"))
+```{r position_can_us_zh, fig.height=6, fig.width=8}
+# # Note méthodologique: pour mesurer la proportion de votes "en faveur" des
+# motions de l'AGNU tous enjeux confondus, on doit utiliser onu_large, puisque
+# "onu" (au format long) a un nombre variable d'enjeux (et donc de lignes) pour
+# chaque résolution qui fausse le calcul des proportions. Nous avons déjà
+# calculé cette proportion plus haut.
+#
+# # Cependant, pour mesurer la proportion de votes "en faveur" *en désagrégeant
+# par enjeu*, peut sans problème partir du jeu de données "onu", profitant ainsi
+# du fait que les enjeux sont maintenant des niveaux de la variable "enjeux", ce
+# qui de facetter facilement le graphique. Il faut alors *transmuter* "prop_oui"
+# en le recalculant pour chaque enjeu filtré.
 
-# onu %>% 
-#   group_by(year = year(date), pays) %>%
-#   filter(pays %in% c(g7, "CHN") & year > 1989 & member == 1) %>% 
-#   mutate(percent_yes = mean(vote_long == "Pour")) %>% View()
-#   ggplot(mapping = aes(x = year, y = percent_yes, color = pays)) +
-#     geom_line() +
-#     ylab("proportion des votes 'en faveur'") +
-#   xlab("année") +
-#   ggtitle("La Chine vote plus souvent en faveur des résolutions de l'AGNU que les pays du G7.", 
-#           "Le Canada est significativement plus consverateur à l'ONU que les autres pays du G7.")
+
+onu_large %>% 
+  group_by(year = year(date), pays) %>% 
+  filter( year > 1989 & pays %in% c(g7, "CHN")) %>% 
+  ggplot(aes(x = year, y = prop_oui, color = pays)) +
+    geom_line(size = 1.5, alpha = 0.5) +
+    ylab('proportion des votes "en faveur"') +
+  xlab("année") +
+  ggtitle("La Chine vote plus souvent en faveur des résolutions de l'AGNU",
+          "Le Canada est plus consverateur à l'ONU que les autres pays du G7") +
+  theme_economist_white() +
+  gghighlight() +
+  scale_color_brewer(palette = "Set1") +
+  theme(legend.position = "none")
 
 ```
 
 Cette situation change-t-elle en fonction des enjeux?
 
-```{r}
+```{r, fig.width=8, fig.height=16}
+# À faire: faire une fonction avec filtre = enjeux et facette par enjeux
+
+# Définition d'un jeu de données plus restreint 
+onu_enjeux <- onu_large %>% 
+  group_by(year = year(date), pays) %>% 
+  filter( year > 1989 & pays %in% c(g7, "CHN")) %>% 
+  mutate(prop_oui = mean(vote_long == "Pour"))
 
 
+# Définition d'une fonction graphique générique -- source:
+# https://stackoverflow.com/questions/4856849/looping-over-variables-in-ggplot, 
+# answered Aug 27 '18 at 19:10 by Tung
+
+fonction <- function(df, .enjeu){
+  df %>% 
+    filter(!! sym(.enjeu) == 1) %>% 
+    group_by(year = year(date), pays) %>% 
+    mutate(prop_oui = mean(vote_long == "Pour")) %>% 
+    ungroup() %>% 
+    ggplot(aes(year, prop_oui, colour = pays)) +
+    geom_line() +
+    gghighlight(use_direct_label = FALSE) +
+    xlab("") +
+    ylab("Prop. annuelle de votes 'oui'") +
+#    ggtitle(label = sym(.enjeu)) +
+    facet_wrap(~ pays, scales = "free_x", ncol = 4, nrow = 2) +
+    theme_few() +
+    theme(legend.position = "none") +
+    theme(strip.text = element_text(hjust = 1)) +
+    theme(strip.placement = "outside") 
+}
+
+graphes_g7 <- map(~ fonction(df = onu_enjeux, .enjeu = .x), .x = enjeux$court[2:7])
+cowplot::plot_grid(plotlist = graphes_g7, nrow = 6, ncol = 1, labels = as.list(enjeux$long[2:7]))
 
 ```
-
-
