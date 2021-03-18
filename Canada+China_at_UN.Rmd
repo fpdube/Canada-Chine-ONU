@@ -21,6 +21,14 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 # cache("new_cache") # Ne faire qu'une seule fois
 ```
 
+Plan de l'analyse
+=================
+1. Pays de G7 + Chine: total et par enjeux
+2. Canada, Irlande et Norvège: par enjeux
+3.    
+
+
+
 Description et exploration visuelle des données
 =================================================
 
@@ -275,7 +283,7 @@ fonction_enjeux2 <- function(df, .enjeu){
     filter(pays %in% c("CAN", "NOR", "IRL")) %>% 
     distinct(year, .keep_all = TRUE)
   
-  td_lmic <- df %>% 
+  td_dev <- df %>% 
     filter(!! sym(.enjeu) == 1) %>% 
     ungroup() %>% 
     group_by(year = year(date)) %>%
@@ -283,22 +291,12 @@ fonction_enjeux2 <- function(df, .enjeu){
     mutate(prop_oui = mean(vote_long == "Pour")) %>% 
     # Une fois prop_oui calculé, on simplifie le tableau
     filter(vote_long == "Pour") %>% 
-    mutate(pays = "LMIC", pays_long = "LMIC") %>% 
+    mutate(pays = "DEV", pays_long = "DEV") %>% 
     distinct(year, .keep_all = TRUE)
     
-  td_umic <- df %>% 
-    filter(!! sym(.enjeu) == 1) %>% 
-    ungroup() %>% 
-    group_by(year = year(date)) %>%
-    filter(umic == 1) %>% 
-    mutate(prop_oui = mean(vote_long == "Pour")) %>% 
-    # Une fois prop_oui calculé, on simplifie le tableau
-    filter(vote_long == "Pour") %>% 
-    mutate(pays = "UMIC", pays_long = "UMIC") %>% 
-    distinct(year, .keep_all = TRUE)
-  
-  # On combine les trois td en un seul
-  td <- rbind(td_riches, td_lmic, td_umic)
+ 
+  # On combine les deux td en un seul
+  td <- rbind(td_riches, td_dev)
   
   #... qu'on présente en graphique
   td %>% 
@@ -310,7 +308,9 @@ fonction_enjeux2 <- function(df, .enjeu){
     ylab("Prop. annuelle de votes 'oui'") +
 #    ggtitle(label = sym(.enjeu)) +
 #    facet_wrap(~ pays, scales = "free_x", ncol = 4, nrow = 2) +
-    theme_few() +
+#    theme_fivethirtyeight() +
+    theme_economist() +
+    scale_y_continuous(limits = c(0, 1), breaks = c(0.25, 0.50, 0.75))+
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
     theme(strip.placement = "outside")
@@ -326,6 +326,12 @@ cowplot::plot_grid(plotlist = graphes_IRL_NOR,
                    vjust = -0.5)
 ```
 
+
+
+Annexe: quelques tests
+======================
+
+Les enjeux ont une faible corrélation entre eux et représentent donc des dimensions distinctes
 ```{r}
 # On crée un tableau des résolutions 
 td_resolutions <- onu_large %>% 
@@ -334,7 +340,39 @@ td_resolutions <- onu_large %>%
   
 td_resolutions %>% select(., -c(resid, year, short, descr, autre, nb_enjeux)) %>% corrr::correlate() %>% View()
 
+```
+
+On peut identifier les pays en développement dont les habitudes de vote sont très semblables à celles de la moyenne des pays en développement.
+```{r}
+onu_enjeux3 <- onu_large %>% 
+  mutate(dev = pays %in% dev) %>% 
+  group_by(year = year(date), pays) %>% 
+  filter( year > 1989)  %>% 
+  filter(dev == TRUE) %>% 
+  summarize(prop_oui = mean(vote_long == "Pour"))
+
+td <- onu_large  %>% 
+  mutate(dev = pays %in% dev) %>% 
+  group_by(year = year(date)) %>% 
+  filter( year > 1989)  %>% 
+  filter(dev == TRUE) %>% 
+  summarize(prop_oui = mean(vote_long == "Pour")) %>% 
+  mutate(pays = "DEV",
+         pays_long = "DEV")
+
+
+rbind(onu_enjeux3, td) %>% 
+  group_by(year) %>% 
+  select(pays, year, prop_oui) %>% 
+  mutate(prop_oui = scale(prop_oui)) %>% 
+  ungroup() %>% 
+  group_by(pays) %>% 
+  summarize(total = sum(prop_oui)) %>% 
+  slice_min(order_by = abs(total), n = 20
+            )
 
 
 ```
+
+
 
