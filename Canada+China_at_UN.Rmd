@@ -13,9 +13,9 @@ load.project() # Charge toutes les bibliothèques de cette analyse, définies da
 
 # Define options
 knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_chunk$set(fig.width=8, fig.height=8) 
-knitr::opts_chunk$set(cache=TRUE)
-theme_set(theme_economist()) # Définit le thème utilisé pour les graphiques
+knitr::opts_chunk$set(fig.width = 8, fig.height = 8)
+knitr::opts_chunk$set(cache = TRUE)
+theme_set(theme_few()) # Définit le thème utilisé pour les graphiques
 
 # Télécharger une base de données d'indicateurs de la Banque mondiale
 # new_cache <- wb_cache() # Ne faire qu'une seule fois
@@ -32,9 +32,13 @@ Plan de l'analyse
 Le présent rapport vise à explorer ces questions à travers les tendances de vote des membres de l'AGNU désagrégées selon six enjeux-types par Erik Voeten de l'université Harvard. Il est structuré comme suit. 
 
 1. Description des données
+
 2. Positionnement des pays du G7 et de la Chine par enjeux
+
 3. Positionnement du Canada, de l'Irlande et de la Norvège par enjeux
+
 4. Classification des pays en développement à l'ONU selon leurs tendances de vote
+
 5. Annexe
 
 1. Description des données
@@ -47,11 +51,17 @@ Le chercheur Erik Voeten maintien une base de données de toutes les résolution
 Cette base de données est présevée sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec le livre de codes associé expliquant les variables utilisées.
 
 Chaque résolution est associée à un ou plusieurs enjeux particuliers:
+
 - Colonialisme
+
 - Développement économique
+
 - Désarmement
+
 - Droits de la personne
+
 - Moyen-Orient
+
 - Nucléaire
 
 Nous y avons rajouté une septième catégorie, "Autre", pour identifier les résolutions n'entrant dans aucune des catégories ci-dessus. 
@@ -62,70 +72,77 @@ On note que certains enjeux importants, comme les changements climatiques, les m
 
 Nous présentons un échantillon du tableau en annexe. 
 
-```{r manip_complete_votes}
+```{r nettoyage}
 # Télécharger la base de données -- ne faire qu'une seule fois
 # download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
 # load("./data/onu_votes.RData")
 
 
 # On recode certaines valeurs et renomme les variables d'enjeux et de pays
-onu_large <- completeVotes %>% 
-  mutate(vote_long = factor(vote, labels = c("Pour", "Abstention", "Contre", "Absent", "Non membre"))) %>% 
-  rename(moyen_orient = me, 
-         nucleaire = nu, 
-         desarmement = di, 
-         droit_pers = hr, 
-         colonialisme = co, 
-         dev_econ = ec, 
-         pays = Country, 
-         pays_long = Countryname) %>% 
-  
-  # On ajoute un enjeu "autre" 
-  mutate(nb_enjeux = (moyen_orient + 
-                     nucleaire +
-                     desarmement +
-                     droit_pers +
-                     colonialisme +
-                     dev_econ), 
-         autre = if_else(nb_enjeux == 0, 1, 0)) %>% 
-
-    # On enlève les "votes" des non-membres et les résolutions identiques (3%)
-  filter(vote != 9 & ident == 0) %>% 
-  
+onu_large <- completeVotes %>%
+  mutate(vote_long = factor(vote, labels = c("Pour", "Abstention", "Contre", "Absent", "Non membre"))) %>%
+  rename(
+    moyen_orient = me,
+    nucleaire = nu,
+    desarmement = di,
+    droit_pers = hr,
+    colonialisme = co,
+    dev_econ = ec,
+    pays = Country,
+    pays_long = Countryname
+  ) %>%
+  # On ajoute un enjeu "autre"
+  mutate(
+    nb_enjeux = (moyen_orient + nucleaire +
+      desarmement +
+      droit_pers +
+      colonialisme +
+      dev_econ),
+    autre = if_else(nb_enjeux == 0, 1, 0)
+  ) %>%
+  # On enlève les "votes" des non-membres et les résolutions identiques (3%)
+  filter(vote != 9 & ident == 0) %>%
   # On mesure la proportion de votes "en faveur" des résolutions de l'AGNU tous
   # enjeux confondus par pays et par année.
-  group_by(year = year(date), pays) %>% 
+  group_by(year = year(date), pays) %>%
   mutate(prop_oui = mean(vote_long == "Pour")) %>%
-  ungroup() %>% 
-
+  ungroup() %>%
   # On reformate le tableau le tableau en y enlevant les variables redondantes
-  select(resid, vote_long, year, pays, prop_oui, importantvote, short, moyen_orient, nucleaire, 
-         desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux, 
-         everything(),
-         -rcid, -amend, -member, -ccode, -ident) 
+  select(
+    resid, vote_long, year, pays, prop_oui, importantvote, short, moyen_orient, nucleaire,
+    desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux,
+    everything(),
+    -rcid, -amend, -member, -ccode, -ident
+  )
 
 
 ## Définition des enjeux: on va les passer en boucle
-enjeux <- tibble(court = c("autre", 
-                           "colonialisme", 
-                           "desarmement", 
-                           "dev_econ", 
-                           "droit_pers", 
-                           "moyen_orient", 
-                           "nucleaire"), 
-  long = c("Autre", 
-           "Colonialisme", 
-           "Désarmement", 
-           "Développement économique", 
-           "Droits de la personne", 
-           "Moyen-Orient", 
-           "Nucléaire"))
+enjeux <- tibble(
+  court = c(
+    "autre",
+    "colonialisme",
+    "desarmement",
+    "dev_econ",
+    "droit_pers",
+    "moyen_orient",
+    "nucleaire"
+  ),
+  long = c(
+    "Autre",
+    "Colonialisme",
+    "Désarmement",
+    "Développement économique",
+    "Droits de la personne",
+    "Moyen-Orient",
+    "Nucléaire"
+  )
+)
 
-## On définit un tableau "long" intégrant les enjeux dans les variables 
-onu <- onu_large %>% 
-  pivot_longer(cols = all_of(enjeux[[1]]), names_to = "enjeux", values_to = "valeur") %>% 
-  filter(valeur == 1) %>% select(resid, year, pays, vote_long, enjeux, everything(), -valeur)
-
+## On définit un tableau "long" intégrant les enjeux dans les variables
+onu <- onu_large %>%
+  pivot_longer(cols = all_of(enjeux[[1]]), names_to = "enjeux", values_to = "valeur") %>%
+  filter(valeur == 1) %>%
+  select(resid, year, pays, vote_long, enjeux, everything(), -valeur)
 ```
 
 Le tableau contient `r onu_large %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, organisé en  `r dim(onu_large)[2]` variables sur `r dim(onu_large)[1]` rangées. 
@@ -140,28 +157,41 @@ Pour l'analyse, nous allons définir certains groupements de pays: G7, G20, pays
 ```{r definitions_pays}
 # Dans cette section, on crée des "vecteurs" contenant différents regroupements de pays
 
-g7 <- c("Canada", "France", "Germany", "Italy", "Japan", "United Kingdom", 
-        "United States") %>%
+g7 <- c(
+  "Canada", "France", "Germany", "Italy", "Japan", "United Kingdom",
+  "United States"
+) %>%
   countrycode(., origin = "country.name", destination = "iso3c")
 
-g20 <- c("Argentina", "Australia", "Brazil", "Canada", 'China', "France", "Germany", "India", "Indonesia", "Italy", "Japan", "Mexico", "Netherlands", "Russia", "Saudi Arabia", "Singapore", "South Africa", "South Korea", "Spain", "Switzerland", "Turkey", "United Kingdom", "United States") %>% countrycode(., origin = "country.name", destination = "iso3c")
+g20 <- c("Argentina", "Australia", "Brazil", "Canada", "China", "France", "Germany", "India", "Indonesia", "Italy", "Japan", "Mexico", "Netherlands", "Russia", "Saudi Arabia", "Singapore", "South Africa", "South Korea", "Spain", "Switzerland", "Turkey", "United Kingdom", "United States") %>% countrycode(., origin = "country.name", destination = "iso3c")
 
 # Pour l'Afrique sub-saharienne, on utilise la base de données du paquet countrycode
-afr <- countrycode::codelist_panel %>% 
-  filter(year == 2020 & region == "Sub-Saharan Africa" & !is.na(iso3c)) %>% 
+afr <- countrycode::codelist_panel %>%
+  filter(year == 2020 & region == "Sub-Saharan Africa" & !is.na(iso3c)) %>%
   pull(iso3c) # dplyr::pull permet de retourner un vecteur
 
-# Pour les pays en développement, on génère un tableau de la 
+# Pour les pays en développement, on génère un tableau de la
 # Banque mondiale et on en extrait les pays en développement (il y en a 218)
-pays <- wb_countries() %>% 
-  filter(income_level != "Aggregates") %>% 
-  select(-c(capital_city, contains("_iso2c"), contains("admin_")))
-  
+if (!exists("pays")) {
+  pays <- wb_countries() %>%
+    filter(income_level != "Aggregates") %>%
+    select(-c(capital_city, contains("_iso2c"), contains("admin_")))
+  cache("pays")
+}
+
 # Les pays en développement -- on en fait des vecteurs
-dev <- pays %>% filter(income_level_iso3c != "HIC") %>% pull("iso3c")
-lic <- pays %>% filter(income_level_iso3c == "LIC") %>% pull("iso3c")
-lmic <- pays %>% filter(income_level_iso3c == "LMC") %>% pull("iso3c")
-umic <- pays %>% filter(income_level_iso3c == "UMC") %>% pull("iso3c")
+dev <- pays %>%
+  filter(income_level_iso3c != "HIC") %>%
+  pull("iso3c")
+lic <- pays %>%
+  filter(income_level_iso3c == "LIC") %>%
+  pull("iso3c")
+lmic <- pays %>%
+  filter(income_level_iso3c == "LMC") %>%
+  pull("iso3c")
+umic <- pays %>%
+  filter(income_level_iso3c == "UMC") %>%
+  pull("iso3c")
 ```
 
 
@@ -171,7 +201,10 @@ Analyse - Partie 1: Évolution de la position du Canada à l'ONU
 Par rapport au G7: Le Canada est devenu le second pays le plus conservateur
 ---------------------------------------------------------------
 
-**De façon générale, La Chine vote beaucoup plus souvent en faveur des propositions de l'AGNU que les pays du G7.** Comme on peut le voir ci-dessous, *tous enjeux confondus*, les États-Unis sont les plus conservateurs à l'AGNU; le Canada est second le Canada vote de manière plus conservatrice que presque tous les pays du G7 à l'ONU, à l'exception des États-Unis. La Chine vote en faveur des résolutions de l'AGNU beaucoup plus fréquemment que les pays du G7.
+**De façon générale, La Chine vote beaucoup plus souvent en faveur des propositions de l'AGNU que les pays du G7.** À l'inverse, comme on peut le voir ci-dessous, les États-Unis sont le pays le plus conservateur à l'AGNU parmi les pays du G7, *tous enjeux confondus*. Le fait que le Japon soit le pays le plus libéral du G7 semble cohérent avec sa doctrine de promotion du "soft power" dans ses relations internationales. 
+
+La position du Canada à l'AGNU a progressivement décliné depuis 2005, année marquant le début du premier mandat du gouvernement conservateur de Stephen Haper. L'arrivée au pouvoir du gouvernement libéral de Justin Trudeau en 2015 est accompagnée d'une remontée dans la proportion de votes en faveur des résolutions à l'AGNU. Cependant, le Canada demeurait, en 2017 et 2018, moins enclin à appuyer ces résolutions que les autres pays du G7.
+
 
 ```{r position_can_us_zh, fig.height=6, fig.width=8}
 # # Note méthodologique: pour mesurer la proportion de votes "en faveur" des
@@ -187,121 +220,123 @@ Par rapport au G7: Le Canada est devenu le second pays le plus conservateur
 # en le recalculant pour chaque enjeu filtré.
 
 
-onu_large %>% 
-  group_by(year = year(date), pays) %>% 
-  filter( year > 1989 & pays %in% c(g7, "CHN")) %>% 
+onu_large %>%
+  group_by(year = year(date), pays) %>%
+  filter(year > 1999 & pays %in% c(g7, "CHN")) %>%
   ggplot(aes(x = year, y = prop_oui, color = pays)) +
-    geom_line(size = 1.5, alpha = 0.5) +
-    ylab('proportion des votes "en faveur"') +
+  geom_line(size = 1.5, alpha = 0.5) +
+  ylab('proportion des votes "en faveur"') +
   xlab("année") +
-  ggtitle("La Chine vote plus souvent en faveur des résolutions de l'AGNU",
-          "Le Canada est plus consverateur à l'ONU que les autres pays du G7") +
-#  theme_economist_white() +
+  ggtitle(
+    "La Chine vote plus souvent en faveur des résolutions de l'AGNU",
+    "Le Canada est second pays le plus consverateur du G7 à l'ONU"
+  ) +
   gghighlight() +
-#  scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "none")
-
+  theme(legend.position = "none") +
+  theme_bw()
 ```
 
 ... mais la question moyen-orientale tire le Canada vers le bas
 ------------------------------------------------------
 
-Cette situation change-t-elle en fonction des enjeux? Quelques observations émergent de la série de graphiques ci-dessous.
+**La Chine, le Japon et les États-Unis ont une position stable l'un par rapport à l'autre sur chaque enjeu.** La Chine vote plus souvent en faveur des résolutions de l'ONU que tous les pays du G7 confondus, indépendamment des enjeux. À l'inverse, les États-Unis demeurent le pays le plus conservateur du G7 pour tous les enjeux et presque toutes les années depuis 2000.   
 
-- La Chine continue de voter plus fréquemment en faveur des résolutions de l'AGNU que les pays du G7, et ce, pour tous les enjeux. À l'inverse, les États-Unis sont le pays le plus conservateur du G7.
+**La position du Canada parmi les membres du G7 change considérablement selon les enjeux.** Ainsi, dans les dernières années le Canada a voté de façon plus progressive sur les enjeux du désarmement et du développement économique. Il s'est situé dans la tendance médiane des pays du G7 sur les questions nucléaire et possiblement du colonialisme. 
 
-- Sur les enjeux de développement économique, et à l'exception des États-Unis, les pays du G7 ont tendance à se montrer très favorable aux propositions de l'AGNU, si bien que l'écart avec le vote chinois est faible.
+**Sur les questions relatives aux droits de la personne et au Moyen-Orient, le Canada a arrimé sa position sur celle des États-Unis depuis 2010.** Fait intéressant, l'arrivée d'un gouvernement libéral n'a rien changé sur ce plan. Dans tous les cas, la position du Canada sur ces deux enjeux explique son conservatisme global à l'AGNU.
 
-- Le "conservatisme" canadien à l'AGNU est surtout le résultat du changement dans la position canadienne face à la question palestinienne depuis 2005--changement qui a d'ailleurs survécu à l'arrivée au pouvoir d'un gouvernement libéral en 2015.
 
-- La position du Japon est la plus "libérale" du G7 sur presque tous les enjeux.
-
-```{r, fig.width=8, fig.height=4}
+```{r, fig.width=6, fig.height=16}
 # À faire: faire une fonction avec filtre = enjeux et facette par enjeux
 
-# Définition d'un jeu de données plus restreint 
-onu_enjeux <- onu_large %>% 
-  group_by(year = year(date), pays) %>% 
-  filter( year > 1989 & pays %in% c(g7, "CHN")) %>% 
+# Définition d'un jeu de données plus restreint
+onu_enjeux <- onu_large %>%
+  group_by(year = year(date), pays) %>%
+  filter(year > 1999 & pays %in% c(g7, "CHN")) %>%
   mutate(prop_oui = mean(vote_long == "Pour"))
 
 
 # Définition d'une fonction graphique générique -- source:
-# https://stackoverflow.com/questions/4856849/looping-over-variables-in-ggplot, 
+# https://stackoverflow.com/questions/4856849/looping-over-variables-in-ggplot,
 # answered Aug 27 '18 at 19:10 by Tung
 
-fonction_enjeux <- function(df, .enjeu){
-  df %>% 
-    filter(!! sym(.enjeu) == 1) %>% 
-    group_by(year = year(date), pays) %>% 
-    mutate(prop_oui = mean(vote_long == "Pour")) %>% 
-    ungroup() %>% 
+
+fonction_enjeux <- function(df, .enjeu) {
+  .enjeu_long <- enjeux %>%
+    filter(court == (.enjeu)) %>%
+    pull(long)
+  df %>%
+    filter(!!sym(.enjeu) == 1) %>%
+    group_by(year = year(date), pays) %>%
+    mutate(prop_oui = mean(vote_long == "Pour")) %>%
+    ungroup() %>%
     ggplot(aes(year, prop_oui, colour = pays)) +
     geom_line() +
     gghighlight(use_direct_label = FALSE) +
     xlab("") +
     ylab("Prop. annuelle de votes 'oui'") +
-    ggtitle(label = sym(.enjeu)) +
-    facet_wrap(~ pays, scales = "free_x", ncol = 4, nrow = 2) +
+    ggtitle(label = sym(.enjeu_long)) +
+    facet_wrap(~pays, scales = "free_x", ncol = 4, nrow = 2) +
     theme_few() +
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
-    theme(strip.placement = "outside") 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    theme(strip.placement = "outside")
 }
 
 graphes_g7 <- map(~ fonction_enjeux(df = onu_enjeux, .enjeu = .x), .x = enjeux$court[2:7])
-# cowplot::plot_grid(plotlist = graphes_g7, 
-#                    nrow = 6, 
-#                    ncol = 1, 
-#                    labels = as.list(enjeux$long[2:7]),
-#                    label_x = 0, 
-#                    label_y = 0,
-#                    hjust = -0.5, 
-#                    vjust = -0.5)
-
-graphes_g7
+patchwork::wrap_plots(graphes_g7[1:3], ncol = 1) # Premier graphique
 ```
+
+```{r, fig.width=6, fig.height=16}
+patchwork::wrap_plots(graphes_g7[4:6], ncol = 1) # Deuxième graphique
+```
+
+
+
 Comment l'Irlande, la Norvège, et les pays en développement se situent-ils face à ces enjeux?
 ------------------------------------------------------------
 
 ```{r irlande_norvege, fig.width=8, fig.height=4}
 
-onu_enjeux2 <- onu_large %>% 
-    mutate(dev = pays %in% dev,
-         lic = pays %in% lic,
-         lmic = pays %in% lmic,
-         umic = pays %in% umic) %>% 
-  group_by(year = year(date), pays) %>% 
-  filter( year > 1989)  %>% 
+onu_enjeux2 <- onu_large %>%
+  mutate(
+    dev = pays %in% dev,
+    lic = pays %in% lic,
+    lmic = pays %in% lmic,
+    umic = pays %in% umic
+  ) %>%
+  group_by(year = year(date), pays) %>%
+  filter(year > 1989) %>%
   filter(dev == TRUE || pays %in% c("IRL", "NOR", "CAN"))
 
 # À FAIRE: Créer une fonction qui résume les données en fonction d'une liste de groupes de pays qu'on lui passe pour chaque enjeux. Possiblement deux fonctions.
 
-fonction_enjeux2 <- function(df, .enjeu){
+fonction_enjeux2 <- function(df, .enjeu) {
   # On crée 2 td: un pour IRL/NOR/CAN; DEV qu'on joint ensemble
-  td_riches <- df %>% 
-    filter(!! sym(.enjeu) == 1) %>% 
-    group_by(year = year(date), pays) %>% 
-    mutate(prop_oui = mean(vote_long == "Pour")) %>% 
-    filter(pays %in% c("CAN", "NOR", "IRL")) %>% 
+  td_riches <- df %>%
+    filter(!!sym(.enjeu) == 1) %>%
+    group_by(year = year(date), pays) %>%
+    mutate(prop_oui = mean(vote_long == "Pour")) %>%
+    filter(pays %in% c("CAN", "NOR", "IRL")) %>%
     distinct(year, .keep_all = TRUE)
-  
-  td_dev <- df %>% 
-    filter(!! sym(.enjeu) == 1) %>% 
-    ungroup() %>% 
+
+  td_dev <- df %>%
+    filter(!!sym(.enjeu) == 1) %>%
+    ungroup() %>%
     group_by(year = year(date)) %>%
-    filter(lmic == 1) %>% 
-    mutate(prop_oui = mean(vote_long == "Pour")) %>% 
+    filter(lmic == 1) %>%
+    mutate(prop_oui = mean(vote_long == "Pour")) %>%
     # Une fois prop_oui calculé, on simplifie le tableau
-    filter(vote_long == "Pour") %>% 
-    mutate(pays = "DEV", pays_long = "DEV") %>% 
+    filter(vote_long == "Pour") %>%
+    mutate(pays = "DEV", pays_long = "DEV") %>%
     distinct(year, .keep_all = TRUE)
- 
+
   # On combine les deux td en un seul
   td <- rbind(td_riches, td_dev)
-  
-  #... qu'on présente en graphique
-  td %>% 
+
+  # ... qu'on présente en graphique
+  td %>%
     ungroup() %>%
     ggplot(aes(year, prop_oui, colour = pays)) +
     geom_line(size = 1.5, alpha = 0.5) +
@@ -309,22 +344,22 @@ fonction_enjeux2 <- function(df, .enjeu){
     xlab("") +
     ylab("Prop. annuelle de votes 'oui'") +
     ggtitle(label = sym(.enjeu)) +
-#    facet_wrap(~ pays, scales = "free_x", ncol = 4, nrow = 2) +
-#    theme_fivethirtyeight() +
+    #    facet_wrap(~ pays, scales = "free_x", ncol = 4, nrow = 2) +
+    #    theme_fivethirtyeight() +
     theme_economist() +
-    scale_y_continuous(limits = c(0, 1), breaks = c(0.25, 0.50, 0.75))+
+    scale_y_continuous(limits = c(0, 1), breaks = c(0.25, 0.50, 0.75)) +
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
     theme(strip.placement = "outside")
 }
 
 graphes_IRL_NOR <- map(~ fonction_enjeux2(df = onu_enjeux2, .enjeu = .x), .x = enjeux$court[2:7])
-# cowplot::plot_grid(plotlist = graphes_IRL_NOR, 
-#                    ncol = 1, 
+# cowplot::plot_grid(plotlist = graphes_IRL_NOR,
+#                    ncol = 1,
 # #                   labels = enjeux[["long"]][2:7],
-#                    label_x = 0, 
+#                    label_x = 0,
 #                    label_y = 0,
-#                    hjust = -0.5, 
+#                    hjust = -0.5,
 #                    vjust = -0.5)
 
 graphes_IRL_NOR
@@ -337,45 +372,45 @@ Annexe: quelques tests
 
 Les enjeux ont une faible corrélation entre eux et représentent donc des dimensions distinctes
 ```{r}
-# On crée un tableau des résolutions 
-td_resolutions <- onu_large %>% 
-  select(resid, year, importantvote, short, descr, moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux) %>% 
+# On crée un tableau des résolutions
+td_resolutions <- onu_large %>%
+  select(resid, year, importantvote, short, descr, moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux) %>%
   distinct(resid, .keep_all = TRUE)
-  
-td_resolutions %>% select(., -c(resid, year, short, descr, autre, nb_enjeux)) %>% corrr::correlate() %>% View()
 
+td_resolutions %>%
+  select(., -c(resid, year, short, descr, autre, nb_enjeux)) %>%
+  corrr::correlate() %>%
+  View()
 ```
 
 On peut identifier les pays en développement dont les habitudes de vote sont très semblables à celles de la moyenne des pays en développement.
 ```{r}
-onu_enjeux3 <- onu_large %>% 
-  mutate(dev = pays %in% dev) %>% 
-  group_by(year = year(date), pays) %>% 
-  filter( year > 1989)  %>% 
-  filter(dev == TRUE) %>% 
+onu_enjeux3 <- onu_large %>%
+  mutate(dev = pays %in% dev) %>%
+  group_by(year = year(date), pays) %>%
+  filter(year > 1989) %>%
+  filter(dev == TRUE) %>%
   summarize(prop_oui = mean(vote_long == "Pour"))
 
-td <- onu_large  %>% 
-  mutate(dev = pays %in% dev) %>% 
-  group_by(year = year(date)) %>% 
-  filter( year > 1989)  %>% 
-  filter(dev == TRUE) %>% 
-  summarize(prop_oui = mean(vote_long == "Pour")) %>% 
-  mutate(pays = "DEV",
-         pays_long = "DEV")
+td <- onu_large %>%
+  mutate(dev = pays %in% dev) %>%
+  group_by(year = year(date)) %>%
+  filter(year > 1989) %>%
+  filter(dev == TRUE) %>%
+  summarize(prop_oui = mean(vote_long == "Pour")) %>%
+  mutate(
+    pays = "DEV",
+    pays_long = "DEV"
+  )
 
-
-rbind(onu_enjeux3, td) %>% 
-  group_by(year) %>% 
-  select(pays, year, prop_oui) %>% 
-  mutate(prop_oui = scale(prop_oui)) %>% 
-  ungroup() %>% 
-  group_by(pays) %>% 
-  summarize(total = sum(prop_oui)) %>% 
-  slice_min(order_by = abs(total), n = 20
-            )
-
-
+rbind(onu_enjeux3, td) %>%
+  group_by(year) %>%
+  select(pays, year, prop_oui) %>%
+  mutate(prop_oui = scale(prop_oui)) %>%
+  ungroup() %>%
+  group_by(pays) %>%
+  summarize(total = sum(prop_oui)) %>%
+  slice_min(order_by = abs(total), n = 20)
 ```
 
 5. Annexe 
@@ -384,6 +419,9 @@ rbind(onu_enjeux3, td) %>%
 Voici un échantillon du tableau `onu_large`. 
 
 ```{r}
-onu_large %>% slice_sample(n = 5) %>% kable()
+onu_large %>%
+  slice_sample(n = 5) %>%
+  kable()
 ```
+
 
