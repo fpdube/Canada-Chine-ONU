@@ -233,7 +233,8 @@ onu_large %>%
   ) +
   gghighlight() +
   theme(legend.position = "none") +
-  theme_bw()
+  scale_y_continuous(labels = scales::percent) +
+  theme_few()
 ```
 
 ... mais la question moyen-orientale tire le Canada vers le bas
@@ -278,6 +279,7 @@ fonction_enjeux <- function(df, .enjeu) {
     ggtitle(label = sym(.enjeu_long)) +
     facet_wrap(~pays, scales = "free_x", ncol = 4, nrow = 2) +
     theme_few() +
+    scale_y_continuous(labels = scales::percent) +
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
@@ -297,7 +299,11 @@ patchwork::wrap_plots(graphes_g7[4:6], ncol = 1) # Deuxième graphique
 Comment l'Irlande, la Norvège, et les pays en développement se situent-ils face à ces enjeux?
 ------------------------------------------------------------
 
-```{r irlande_norvege, fig.width=8, fig.height=4}
+**Le Canada, l'Irlande et la Norvège ont des positions similaires, sur le désarmement et le développement économique.** En outre, cette position est proche de la position moyenne des pays en développement.
+
+**La position moyenne des pays en développement est similaire à celle de l'Irlande et de la Norvège sur les questions du Moyen-Orient et des droits de la personne.**  Il s'agit, comme nous l'avons vu, des enjeux sur lesquels le Canada est le plus conservateur, même si la position canadienne sur la question des droits de la personne semble vouloir se rapprocher de celle des autres pays du G7, excluant les États-Unis.  
+
+```{r irlande_norvege, fig.width=6, fig.height=16}
 
 onu_enjeux2 <- onu_large %>%
   mutate(
@@ -313,7 +319,11 @@ onu_enjeux2 <- onu_large %>%
 # À FAIRE: Créer une fonction qui résume les données en fonction d'une liste de groupes de pays qu'on lui passe pour chaque enjeux. Possiblement deux fonctions.
 
 fonction_enjeux2 <- function(df, .enjeu) {
-  # On crée 2 td: un pour IRL/NOR/CAN; DEV qu'on joint ensemble
+  .enjeu_long <- enjeux %>%
+    filter(court == (.enjeu)) %>%
+    pull(long)
+  
+  # On crée 2 td: un pour IRL/NOR/CAN; et un pour DEV, qu'on joint ensemble
   td_riches <- df %>%
     filter(!!sym(.enjeu) == 1) %>%
     group_by(year = year(date), pays) %>%
@@ -339,14 +349,14 @@ fonction_enjeux2 <- function(df, .enjeu) {
   td %>%
     ungroup() %>%
     ggplot(aes(year, prop_oui, colour = pays)) +
-    geom_line(size = 1.5, alpha = 0.5) +
-    gghighlight(use_direct_label = TRUE) +
+    geom_line(alpha = 0.5) +
+    gghighlight(use_direct_label = FALSE) +
     xlab("") +
     ylab("Prop. annuelle de votes 'oui'") +
-    ggtitle(label = sym(.enjeu)) +
-    #    facet_wrap(~ pays, scales = "free_x", ncol = 4, nrow = 2) +
-    #    theme_fivethirtyeight() +
-    theme_economist() +
+    ggtitle(label = sym(.enjeu_long)) +
+    facet_wrap(~pays, scales = "free_x", ncol = 4, nrow = 2) +
+    scale_y_continuous(labels = scales::percent) +
+    theme_few() +
     scale_y_continuous(limits = c(0, 1), breaks = c(0.25, 0.50, 0.75)) +
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
@@ -354,21 +364,112 @@ fonction_enjeux2 <- function(df, .enjeu) {
 }
 
 graphes_IRL_NOR <- map(~ fonction_enjeux2(df = onu_enjeux2, .enjeu = .x), .x = enjeux$court[2:7])
-# cowplot::plot_grid(plotlist = graphes_IRL_NOR,
-#                    ncol = 1,
-# #                   labels = enjeux[["long"]][2:7],
-#                    label_x = 0,
-#                    label_y = 0,
-#                    hjust = -0.5,
-#                    vjust = -0.5)
 
-graphes_IRL_NOR
+patchwork::wrap_plots(graphes_IRL_NOR, ncol = 1) + plot_layout(guides='collect')
+```
+
+Regroupement de votes
+====================
+
+```{r definition_tableau_pour_regroupement}
+td_long <- onu_large %>% 
+  filter(year > 2004) %>% 
+  
+  # Évite les dédoublements, au cas où il y en aurait
+  distinct(resid, pays, vote_long) %>% 
+  
+  # Développe toutes les combinaison pays x resid possibles; introduit des NA
+  # dans vote_long où cette combinaison n'existait pas
+  complete(pays, nesting(resid)) %>% 
+  
+  mutate(
+    vote_long = replace_na(as.character(vote_long), "na"),   # Transforme ces NA en chaînes "na"
+    id_vote = str_c("res", resid, vote_long, sep = "_"), # crée un identifiant de vote comme "res_1001_pour"
+    valeur = 1 # Cette valeur deviendra notre valeur instrumentale lorsque le tableau sera pivoté
+  ) %>% 
+  
+  # On élimine les situations potentielles de vote unanime, peu utiles pour l'algorithme de groupement
+  group_by(resid) %>% 
+  mutate(variations = n_distinct(vote_long)) %>% 
+  ungroup() %>% 
+  filter(variations > 1)
+
+td_large  <- td_long %>% 
+  pivot_wider(id_cols = pays,
+              names_from = id_vote,
+              values_from = valeur,
+              values_fill = 0
+              ) %>% 
+  column_to_rownames("pays") %>% 
+  select(order(colnames(.))) %>% 
+  mutate(across(where(is.numeric), ~ as.numeric(scale(.))))
+
+```
+
+```{r alogrithme_regroupement_de_base, fig.width=4, fig.height=4}
+# Basé sur https://juliasilge.com/blog/kmeans-employment/
+
+regroupements_k <- 
+  tibble(k = 1:9) %>% 
+  mutate(kclust = map(k, ~ kmeans(td_large, .x)),
+         
+         # Extrait un td d'une ligne de l'objet kmeans, incluant tot.withinness
+         glanced = map(kclust, glance)
+         )
+
+regroupements_k %>% 
+  unnest(cols = c(glanced)) %>% 
+  ggplot(aes(x = k, y = tot.withinss)) +
+  geom_line(colour = "royalblue4", size = 2, alpha = 0.6) +
+  geom_point(size = 2, colour = "royalblue4") +
+  ggtitle(label = "Définir six regroupements « k »\nsemble optimal.")
+  
+```
+
+```{r}
+regroupement_final <- kmeans(td_large, centers = 6, nstart = 20) %>% 
+  augment(., td_large) %>% 
+  rename(pays = .rownames,
+         cluster = .cluster) %>% 
+  select(pays, cluster)
+
 ```
 
 
 
-Annexe: quelques tests
+
+Annexe 1: quelques tests
 ======================
+
+Les enjeux sont distribués relativement également à travers les années.
+```{r}
+resolutions <- onu_large %>%
+  group_by(year, resid) %>%
+  select(c(year, resid, importantvote, moyen_orient, nucleaire, desarmement, dev_econ, droit_pers, colonialisme)) %>%
+  slice_head(n = 1)
+
+resolutions_sommaire <- resolutions %>%
+  ungroup() %>%
+  group_by(year) %>%
+  summarize(
+    moyen_orient = sum(moyen_orient),
+    nucleaire = sum(nucleaire),
+    desarmement = sum(desarmement),
+    dev_econ = sum(dev_econ),
+    droit_pers = sum(droit_pers),
+    colonialisme = sum(colonialisme)
+  ) %>% 
+  pivot_longer(cols = c(moyen_orient, nucleaire, desarmement, dev_econ, 
+                        droit_pers, colonialisme), names_to = "enjeu", values_to = "nb")
+
+resolutions_sommaire %>% 
+  ggplot(aes(x = year, y = nb)) +
+  geom_area(alpha = 0.5) +
+  facet_wrap(~ enjeu) +
+  xlim(2000, 2018) +
+  theme_gray()
+```
+
 
 Les enjeux ont une faible corrélation entre eux et représentent donc des dimensions distinctes
 ```{r}
@@ -413,15 +514,15 @@ rbind(onu_enjeux3, td) %>%
   slice_min(order_by = abs(total), n = 20)
 ```
 
-5. Annexe 
+Annex 2: Échantillons du tableau
 =========
 
-Voici un échantillon du tableau `onu_large`. 
+Voici un échantillon du tableau des résolutions. 
 
 ```{r}
 onu_large %>%
   slice_sample(n = 5) %>%
-  kable()
+  knitr::kable()
 ```
 
 
