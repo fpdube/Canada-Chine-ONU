@@ -20,6 +20,10 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 # Télécharger une base de données d'indicateurs de la Banque mondiale
 # new_cache <- wb_cache() # Ne faire qu'une seule fois
 # cache("new_cache") # Ne faire qu'une seule fois
+
+# Télécharger la base de données -- ne faire qu'une seule fois
+# download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
+# load("./data/onu_votes.RData")
 ```
 
 Le Canada face aux pays en développement à l'ONU
@@ -63,11 +67,33 @@ On note que certains enjeux importants, comme les changements climatiques, les m
 
 Nous présentons un échantillon du tableau en annexe. 
 
-```{r nettoyage}
-# Télécharger la base de données -- ne faire qu'une seule fois
-# download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
-# load("./data/onu_votes.RData")
+```{r def_enjeux}
 
+## Définition des enjeux pour les passer en boucle
+enjeux <- tibble(
+  court = c(
+    "autre",
+    "colonialisme",
+    "desarmement",
+    "dev_econ",
+    "droit_pers",
+    "moyen_orient",
+    "nucleaire"
+  ),
+  long = c(
+    "Autre",
+    "Colonialisme",
+    "Désarmement",
+    "Développement économique",
+    "Droits de la personne",
+    "Moyen-Orient",
+    "Nucléaire"
+  )
+)
+```
+
+
+```{r def_onu_large}
 
 # On recode certaines valeurs et renomme les variables d'enjeux et de pays
 onu_large <- completeVotes %>%
@@ -101,46 +127,44 @@ onu_large <- completeVotes %>%
   group_by(year = year(date), pays) %>%
   mutate(prop_oui = mean(vote_long == "Pour")) %>%
   ungroup() %>%
-  
+
   # On reformate le tableau le tableau en y enlevant les variables redondantes
   select(
-    resid, vote_long, year, pays, prop_oui, importantvote, short, moyen_orient, nucleaire,
-    desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux,
+    resid, vote_long, year, pays, prop_oui, importantvote, short, 
+    moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre, 
+    nb_enjeux,
     everything(),
     -rcid, -amend, -member, -ccode, -ident
   )
 
-
-## Définition des enjeux: on va les passer en boucle
-enjeux <- tibble(
-  court = c(
-    "autre",
-    "colonialisme",
-    "desarmement",
-    "dev_econ",
-    "droit_pers",
-    "moyen_orient",
-    "nucleaire"
-  ),
-  long = c(
-    "Autre",
-    "Colonialisme",
-    "Désarmement",
-    "Développement économique",
-    "Droits de la personne",
-    "Moyen-Orient",
-    "Nucléaire"
-  )
-)
-
-## On définit un tableau "long" intégrant les enjeux dans les variables
-onu <- onu_large %>%
-  pivot_longer(cols = all_of(enjeux[[1]]), names_to = "enjeux", values_to = "valeur") %>%
-  filter(valeur == 1) %>%
-  select(resid, year, pays, vote_long, enjeux, everything(), -valeur)
 ```
 
-Le tableau contient `r onu_large %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, codées sur `r dim(onu_large)[2]` variables par `r dim(onu_large)[1]` rangées. 
+```{r ajout_proportions_par_enjeux, message=FALSE}
+fn_prop_enjeux <- function(df, .enjeu) {
+  df %>%
+    group_by(year, pays) %>%
+    summarize(
+      !! sym(str_c("prop_", .enjeu)) := 
+        sum((vote_long == "Pour") * !! sym(.enjeu)) / sum(!! sym(.enjeu))
+    )
+}
+
+# On crée une liste de tableaux...
+liste_resumes <- map(~ fn_prop_enjeux(onu_large, .enjeu = .x), .x = enjeux$court)
+
+# ... qu'on fusionne avec la fonction purrr::reduce ...
+td_resumes <- 
+  liste_resumes %>% reduce(inner_join, by = c("year", "pays"))
+
+# ... et qu'on réintègre dans onu_large
+onu_large <-
+  onu_large %>% 
+  left_join(., td_resumes, by = c("year", "pays"))
+```
+
+
+
+Le tableau contient `r onu_large %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, réparties en `r dim(onu_large)[1]` enregistrements.  
 
 Un échantillon en est présenté en annexe.
 
@@ -190,8 +214,8 @@ umic <- pays %>%
 ```
 
 
-Analyse - Partie 1: Évolution de la position du Canada à l'ONU 
-==============================================================
+Analyse - Partie 1: Positionnement du G7 et de la Chine, par enjeux
+=====================================================================
 
 Par rapport au G7: Le Canada est devenu le second pays le plus conservateur
 ---------------------------------------------------------------
@@ -237,8 +261,8 @@ onu_large %>%
   ylab('Proportion des votes "en faveur"') +
   xlab("Année") +
   ggtitle(
-    "La Chine vote plus souvent en faveur des résolutions de l'AGNU",
-    "Le Canada est maintemant le second pays le plus consverateur du G7 à l'ONU"
+    "La Chine vote plus souvent en faveur des résolutions de l'Assemblée générale",
+    "Le Canada est maintemant le second pays le plus consverateur du G7 à l'ONU, même après 2015"
   ) +
   theme(legend.position = "none") +
   scale_y_continuous(labels = scales::percent) +
@@ -341,7 +365,8 @@ onu_enjeux2 <- onu_large %>%
   filter(year > 1989) %>%
   filter(dev == TRUE || pays %in% c("IRL", "NOR", "CAN"))
 
-# À FAIRE: Créer une fonction qui résume les données en fonction d'une liste de groupes de pays qu'on lui passe pour chaque enjeux. Possiblement deux fonctions.
+# À FAIRE: Maintenant que j'ai intégré les variables prop_[enjeu] dans onu_large,
+# on pourrait considérablement simplifier les fonctions ci-dessous.
 
 fonction_enjeux2 <- function(df, .enjeu) {
   .enjeu_long <- enjeux %>%
