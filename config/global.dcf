@@ -8,9 +8,11 @@ munging: TRUE
 logging: FALSE
 logging_level: INFO
 load_libraries: TRUE
-libraries: tidyverse, stringr, lubridate,
-       unvotes, wbstats, countrycode, esquisse, skimr, usethis, tidyr, 
-       gghighlight, ggthemes, cowplot, patchwork, broom, corrr
+libraries: mclust, 
+       tidyverse, stringr, lubridate,
+       unvotes, wbstats, countrycode, 
+       esquisse, skimr, usethis, tidyr, 
+       gghighlight, ggthemes, cowplot, patchwork, broom, corrr, tidyselect, knitr
 as_factors: FALSE
 tables_type: tibble
 attach_internal_libraries: FALSE

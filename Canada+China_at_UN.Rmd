@@ -417,6 +417,21 @@ patchwork::wrap_plots(graphes_IRL_NOR[c(3, 2, 6, 1, 4, 5)], ncol = 1) + plot_lay
 Analyse - Partie 2: Regroupement des pays à l'ONU selon leurs habitudes de votes
 ================================================================================
 
+Nous avons regroupé les pays selon leurs habitudes de votes entre 2005 et 2018 d'après un algorithme de regroupement (*clustering en anglais*). D'après le *critère d'information de Bayes*, le nombre optimal de regroupements est de six.
+
+Quelques particularités à noter:
+
+- **La grande majorité des pays en développement votent à l'AGNU de façon assez homogène**. Il s'agit du groupe 1 dans la série de graphiques ci-dessous, qui comprend 122 pays, incluant les BRICS. Les enjeux du Moyen-Orient et du nucléaire sont à toute fin pratique les seuls où existe une certaine variabilité dans leur vote.
+
+** Un second groupe de pays en développement se distingue par son attitude plus conservatrice sur tous les enjeux.** Il s'agit du groupe 4, composé de dix pays d'Afrique subsaharienne continentale et de six petits États insulaires en développement (PEID). 
+
+** Les pays développés votent presque tous en bloc.** Ce groupe (no. 2, comprenant 46 pays) inclut toute l'Europe, le Japon et la Corée du Sud. Y font également partie l'Ukraine, la Pologne et la Hongrie. 
+
+** Le Canada est dans un groupe restreint de cinq pays** (groupe no. 3) comprenant également l'Australie, et trois (PEID): la Micronésie, les Îles Marshall, et Palaos.
+
+** Les États-Unis et Israël forment un groupe à part.** Ces deux pays (qui forment le groupe no. 5) ont tendance à rejeter en bloc toutes les résolutions présentées à l'AGNU.
+
+**Le Soudan du Sud forme un groupe à lui tout seul.** Ce pays se distingue en effet par son grand nombre d'absences ou d'abstention aux votes de l'AGNU.
 
 
 ```{r definition_tableau_pour_regroupement}
@@ -438,7 +453,7 @@ td_long <- onu_large %>%
   ungroup() %>%
   filter(variations > 1)
 
-td_large <- td_long %>%
+td_large_gmm <- td_long %>%
   pivot_wider(
     id_cols = pays,
     names_from = id_vote,
@@ -450,29 +465,16 @@ td_large <- td_long %>%
   mutate(across(where(is.numeric), ~ as.numeric(scale(.))))
 ```
 
-```{r alogrithme_regroupement_de_base, fig.width=4, fig.height=4}
-# Basé sur https://juliasilge.com/blog/kmeans-employment/
-
-regroupements_k <-
-  tibble(k = 1:9) %>%
-  mutate(
-    kclust = map(k, ~ kmeans(td_large, .x)),
-
-    # Extrait un td d'une ligne de l'objet kmeans, incluant tot.withinness
-    glanced = map(kclust, glance)
-  )
-```
-
 ```{r regroupements_finaux}
-set.seed(4242)
-regroupement_final <- kmeans(td_large, centers = 6, nstart = 100) %>%
-  augment(., td_large) %>%
+set.seed(420)
+
+gmm_res <- Mclust(td_large_gmm, G = 6) %>% 
+  augment(., td_large_gmm) %>% 
   rename(
     pays = .rownames,
-    cluster = .cluster
+    cluster = .class
   ) %>%
   select(pays, cluster)
-
 # On recrée un tableau avec les proportions de vote par pays x année, avec les regroupements
 
 onu_final <- onu_large %>%
@@ -482,40 +484,15 @@ onu_final <- onu_large %>%
   rename(prop_total = prop_oui) %>%
   summarize(across(starts_with("prop"), mean)) %>%
   ungroup() %>%
-  inner_join(regroupement_final, by = "pays") %>%
+  inner_join(gmm_res, by = "pays") %>%
   mutate(pays_long = countrycode(pays, origin = "iso3c", destination = "un.name.fr")) %>%
-  select(pays_long, pays, cluster, prop_total, everything())
+  select(pays_long, pays, cluster, prop_total, everything()) %>% 
+  rename(Groupe = cluster)
+
+
 ```
 
-
-```{r clusters_par_ordre}
-
-# On réorganise les clusters par ordre de grandeur
-td_groupe_pays <- onu_final %>%
-  arrange(pays_long) %>%
-  arrange(c(cluster)) %>%
-  group_by(cluster) %>%
-  select(c(pays_long, cluster)) %>%
-  mutate(
-    n_cluster = n_distinct(pays_long),
-    cluster = as.character(cluster)
-  ) %>%
-  arrange(-n_cluster) %>%
-  ungroup()
-
-td_corresp <-
-  tibble(
-    cluster = pull(distinct(td_groupe_pays, cluster)),
-    Groupe = as.character(1L:6L)
-  ) %>%
-  ungroup()
-
-td_groupe_pays <- left_join(td_groupe_pays, td_corresp, by = "cluster")
-onu_final <- left_join(onu_final, td_corresp,
-  x.by = "cluster",
-  y.by = "cluster"
-)
-
+```{r regroupements_phares}
 groupe_CAN <- onu_final %>%
   filter(pays == "CAN") %>%
   pull(Groupe)
@@ -536,7 +513,7 @@ enjeux <-
   enjeux %>%
   mutate(var = str_c("prop_", court))
 
-fn_graphe_kmeans <- function(.var) {
+fn_graphe_mclust <- function(.var) {
   .enjeu_long <- enjeux %>%
     filter(var == (.var)) %>%
     pull(long)
@@ -551,16 +528,17 @@ fn_graphe_kmeans <- function(.var) {
       limits = c(0, 1),
       breaks = c(0.25, 0.50, 0.75)
     ) +
-    scale_color_brewer(palette = "Dark2") +
+    scale_color_brewer(palette = "Set1") +
     theme(legend.position = "bottom") +
     theme(strip.text = element_text(hjust = 0.5)) +
     theme(strip.placement = "inside")
 }
 
-graphe_kmeans <-
-  map(~ fn_graphe_kmeans(.var = .x), .x = enjeux$var)
+graphe_mclust <-
+  map(~ fn_graphe_mclust(.var = .x), .x = enjeux$var)
 
-titre <- c("Le Canada pourrait considérer se rapprocher des groupes 1, 2 ou 3 pour gagner en influence")
+titre <- c("Le Canada pourrait considérer se rapprocher des groupes 2 ou 4 pour gagner en influence")
+
 sous_titre <- paste0(
   "Le Canada est dans le groupe ",
   groupe_CAN,
@@ -570,35 +548,11 @@ sous_titre <- paste0(
   groupe_CHN
 )
 
-patchwork::wrap_plots(graphe_kmeans, ncol = 2) +
+patchwork::wrap_plots(graphe_mclust, ncol = 2) +
   plot_annotation(title = titre, subtitle = sous_titre) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
 ```
-
-```{r analyse_gmm}
-td_large_gmm <- td_long %>%
-  pivot_wider(
-    id_cols = pays,
-    names_from = id_vote,
-    values_from = valeur,
-    values_fill = 0
-  ) %>%
-  column_to_rownames("pays") %>%
-  select(order(colnames(.))) %>%
-  mutate(across(where(is.numeric), ~ as.numeric(scale(.))))
-
-gmm_res <- Mclust(td_large_gmm, G = 6)
-gmm_res <-  gmm_res %>% 
-  augment(., td_large_gmm) %>% 
-  rename(
-    pays = .rownames,
-    cluster = .class
-  ) %>%
-  select(pays, cluster)
-```
-
-
 
 
 ```{r liste_pays_par_cluster}
