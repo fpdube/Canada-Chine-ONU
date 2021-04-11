@@ -2,7 +2,7 @@
 title: "Dans quelle mesure le Canada et les pays avancés ont-ils délaissé le champ normatif à l'ONU au profit de la Chine?"
 author: "François-Philippe Dubé"
 date: "06/04/2021"
-output: html_document
+output: odt_document
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
@@ -29,17 +29,17 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 Le Canada face aux pays en développement à l'ONU
 =============================================
 
-La défaite récente du Canada à l'élection au Conseil de sécurité de l'ONU (au profit des candidatures de la Norvège et de l'Irlande), pose la question du positionnement du Canada face aux pays en développement à l'ONU. De façon plus large, on peut se demander si le pays avancés--particulièrement ceux du G7--ont bien réussi à répondre aux aspirations exprimées à l'Assemblée générale des Nations unies (AGNU) par les pays en développement, et si la Chine n'est pas plus en phase avec leurs préférences à l'ONU.
+La défaite récente du Canada à l'élection au Conseil de sécurité de l'ONU (au profit des candidatures de la Norvège et de l'Irlande), pose la question du positionnement du Canada face aux pays en développement à l'ONU. De façon plus large, on peut se demander si le pays avancés--particulièrement ceux du G7-- ont bien réussi à répondre aux aspirations exprimées à l'Assemblée générale des Nations unies (AGNU) par les pays en développement, et si la Chine n'est pas plus en phase avec leurs préférences à l'ONU.
 
 Plan de l'analyse
 -----------------
 Le présent rapport vise à explorer ces questions à travers les tendances de vote des membres de l'AGNU désagrégées selon six enjeux-types par Erik Voeten de l'université Harvard. Il est structuré comme suit. 
 
 1. Description des données  
-2. Positionnement des pays du G7 et de la Chine par enjeux  
+2. Positionnement des pays du G7 et de la Chine par enjeux 
 3. Positionnement du Canada, de l'Irlande et de la Norvège par enjeux 
 4. Classification des pays en développement à l'ONU selon leurs tendances de vote  
-5. Annexe  
+5. Annexes  
 
 1. Description des données
 =================================================
@@ -108,7 +108,6 @@ onu_large <- completeVotes %>%
     pays = Country,
     pays_long = Countryname
   ) %>%
-  
   # On ajoute un enjeu "autre"
   mutate(
     nb_enjeux = (moyen_orient + nucleaire +
@@ -118,25 +117,21 @@ onu_large <- completeVotes %>%
       dev_econ),
     autre = if_else(nb_enjeux == 0, 1, 0)
   ) %>%
-  
   # On enlève les "votes" des non-membres et les résolutions identiques (3%)
   filter(vote != 9 & ident == 0) %>%
-  
   # On mesure la proportion de votes "en faveur" des résolutions de l'AGNU tous
   # enjeux confondus par pays et par année.
   group_by(year = year(date), pays) %>%
   mutate(prop_oui = mean(vote_long == "Pour")) %>%
   ungroup() %>%
-
   # On reformate le tableau le tableau en y enlevant les variables redondantes
   select(
-    resid, vote_long, year, pays, prop_oui, importantvote, short, 
-    moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre, 
+    resid, vote_long, year, pays, prop_oui, importantvote, short,
+    moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre,
     nb_enjeux,
     everything(),
     -rcid, -amend, -member, -ccode, -ident
   )
-
 ```
 
 ```{r ajout_proportions_par_enjeux, message=FALSE}
@@ -144,8 +139,8 @@ fn_prop_enjeux <- function(df, .enjeu) {
   df %>%
     group_by(year, pays) %>%
     summarize(
-      !! sym(str_c("prop_", .enjeu)) := 
-        sum((vote_long == "Pour") * !! sym(.enjeu)) / sum(!! sym(.enjeu))
+      !!sym(str_c("prop_", .enjeu)) :=
+        sum((vote_long == "Pour") * !!sym(.enjeu)) / sum(!!sym(.enjeu))
     )
 }
 
@@ -153,25 +148,18 @@ fn_prop_enjeux <- function(df, .enjeu) {
 liste_resumes <- map(~ fn_prop_enjeux(onu_large, .enjeu = .x), .x = enjeux$court)
 
 # ... qu'on fusionne avec la fonction purrr::reduce ...
-td_resumes <- 
+td_resumes <-
   liste_resumes %>% reduce(inner_join, by = c("year", "pays"))
 
 # ... et qu'on réintègre dans onu_large
 onu_large <-
-  onu_large %>% 
+  onu_large %>%
   left_join(., td_resumes, by = c("year", "pays"))
 ```
 
 
-
 Le tableau contient `r onu_large %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, réparties en `r dim(onu_large)[1]` enregistrements.  
 
-Un échantillon en est présenté en annexe.
-
-Définitions - Quelques groupes de pays
---------------------------------------
-
-Pour l'analyse, nous allons définir certains groupements de pays: G7, G20, pays en développement (séparés en pays à revenus faibles ou moyens), Afrique subsaharienne.
 
 ```{r definitions_pays}
 # Dans cette section, on crée des "vecteurs" contenant différents regroupements de pays
@@ -217,6 +205,8 @@ umic <- pays %>%
 Analyse - Partie 1: Positionnement du G7 et de la Chine, par enjeux
 =====================================================================
 
+Dans quelle mesure le tableau d'ensemble qui se dessine résolution après résolution des votes du Canada à l'AGNU correspond-il à l'image que les Canadiens s'en font? Dans quelle mesure le Canada a-t-il un comportement différent de celui des autres pays du G7 à l'AGNU? Et où la Chine se situe-t-elle par rapport aux États-Unis et aux autres pays du G7 sur les différents enjeux répértoriés?
+
 Par rapport au G7: Le Canada est devenu le second pays le plus conservateur
 ---------------------------------------------------------------
 
@@ -233,31 +223,31 @@ La position du Canada à l'AGNU a progressivement décliné depuis 2005, année 
 # calculé cette proportion plus haut.
 
 # On définit un sous-tableau qui fait la moyenne des pays du G7 outre CAN et USA
-  td_G5 <- 
+td_G5 <-
   onu_large %>%
   group_by(year = year(date)) %>%
-  filter(year > 1999 & pays %in% c("DEU", "FRA", "GBR", "ITA", "JPN")) %>% 
-    summarize(max_oui = max(prop_oui),
-              min_oui = min(prop_oui),
-              prop_oui = mean(prop_oui),
-              pays = "Reste du G7"
-    )
+  filter(year > 1999 & pays %in% c("DEU", "FRA", "GBR", "ITA", "JPN")) %>%
+  summarize(
+    max_oui = max(prop_oui),
+    min_oui = min(prop_oui),
+    prop_oui = mean(prop_oui),
+    pays = "Reste du G7"
+  )
 
 # Graphique G7 et Chine
-onu_large %>% 
+onu_large %>%
   group_by(year = year(date), pays) %>%
   filter(year > 1999 & pays %in% c("CAN", "CHN", "USA")) %>%
-  select(pays, year, prop_oui) %>% 
-  
+  select(pays, year, prop_oui) %>%
   # On y joint ici le tableau fait plus haut
-  bind_rows(td_G5) %>% 
-  
+  bind_rows(td_G5) %>%
   ggplot(aes(x = year, y = prop_oui, color = pays)) +
   geom_line(size = 1.5, alpha = 0.5) +
   geom_ribbon(aes(x = year, ymin = min_oui, ymax = max_oui, fill = pays),
-                colour = NA,
-                alpha = 0.2,
-                show.legend = FALSE) +
+    colour = NA,
+    alpha = 0.2,
+    show.legend = FALSE
+  ) +
   ylab('Proportion des votes "en faveur"') +
   xlab("Année") +
   ggtitle(
@@ -267,9 +257,8 @@ onu_large %>%
   theme(legend.position = "none") +
   scale_y_continuous(labels = scales::percent) +
   theme_minimal()
-  
-  
 ```
+  
 
 ... mais les enjeux du Moyen-Orient et de droits de la personne tirent le Canada vers le bas
 ------------------------------------------------------
@@ -281,7 +270,7 @@ onu_large %>%
 **Sur les questions relatives aux droits de la personne et au Moyen-Orient, le Canada a arrimé sa position sur celle des États-Unis depuis 2010.** Fait intéressant, l'arrivée d'un gouvernement libéral n'a rien changé sur ce plan. Dans tous les cas, la position du Canada sur ces deux enjeux explique son conservatisme global à l'AGNU.
 
 
-```{r graphique_par_enjeux1, fig.width=6, fig.height=16}
+```{r prep_graphique_par_enjeux, fig.width=6, fig.height=16}
 # Définition d'un jeu de données plus restreint
 onu_enjeux <- onu_large %>%
   group_by(year = year(date), pays) %>%
@@ -304,15 +293,17 @@ fonction_enjeux <- function(df, .enjeu) {
     mutate(prop_oui = mean(vote_long == "Pour")) %>%
     ungroup() %>%
     ggplot(aes(year, prop_oui, colour = pays)) +
-    geom_line(size = 0.8, alpha= 0.8) +
+    geom_line(size = 0.8, alpha = 0.8) +
     gghighlight(use_direct_label = FALSE) +
     xlab("") +
     ylab("Prop. annuelle de votes 'oui'") +
     ggtitle(label = sym(.enjeu_long)) +
     facet_wrap(~pays, scales = "free_x", ncol = 4, nrow = 2) +
-    scale_y_continuous(labels = scales::percent,
-                       limits = c(0, 1), 
-                       breaks = c(0.25, 0.50, 0.75)) +
+    scale_y_continuous(
+      labels = scales::percent,
+      limits = c(0, 1),
+      breaks = c(0.25, 0.50, 0.75)
+    ) +
     theme_few() +
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
@@ -327,9 +318,9 @@ graphes_g7 <- map(~ fonction_enjeux(df = onu_enjeux, .enjeu = .x), .x = enjeux$c
 # Premier graphique
 patchwork::wrap_plots(graphes_g7[c(3, 2, 6)], ncol = 1) +
   plot_annotation(
-  title = "Le Canada appuie particulièrement les initiatives\nde développement économique",
-  subtitle = "Il se situe dans la moyenne du G7 sur le désarmement et la question nucélaire"
-)
+    title = "Le Canada appuie particulièrement les initiatives\nde développement économique",
+    subtitle = "Il se situe dans la moyenne du G7 sur le désarmement et la question nucélaire"
+  )
 ```
 
 
@@ -338,10 +329,9 @@ patchwork::wrap_plots(graphes_g7[c(3, 2, 6)], ncol = 1) +
 # Deuxième graphique
 patchwork::wrap_plots(graphes_g7[c(1, 4, 5)], ncol = 1) +
   plot_annotation(
-  title = "À l'autre extrème, le Canada a adopté la position américaine\nsur le Moyen-Orient",
-  subtitle = "Il est avec la France sur le colonialisme et avec les É.-U. sur les droits de la personne"
-)
-  
+    title = "À l'autre extrème, le Canada a adopté la position américaine\nsur le Moyen-Orient",
+    subtitle = "Il est avec la France sur le colonialisme et avec les É.-U. sur les droits de la personne"
+  )
 ```
 
 
@@ -350,7 +340,7 @@ Comment l'Irlande, la Norvège, et les pays en développement se situent-ils fac
 
 **Le Canada, l'Irlande et la Norvège ont des positions similaires, sur le désarmement et le développement économique.** En outre, cette position est proche de la position moyenne des pays en développement.
 
-**La position moyenne des pays en développement est similaire à celle de l'Irlande et de la Norvège sur les questions du Moyen-Orient et des droits de la personne.**  Il s'agit, comme nous l'avons vu, des enjeux sur lesquels le Canada est le plus conservateur, même si la position canadienne sur la question des droits de la personne semble vouloir se rapprocher de celle des autres pays du G7, excluant les États-Unis.  
+**La position moyenne des pays en développement (DEV) est similaire à celle de l'Irlande et de la Norvège sur les questions du Moyen-Orient et des droits de la personne.**  Il s'agit, comme nous l'avons vu, des enjeux sur lesquels le Canada est le plus conservateur, même si la position canadienne sur la question des droits de la personne semble vouloir se rapprocher de celle des autres pays du G7, excluant les États-Unis.  
 
 ```{r irlande_norvege, fig.width=6, fig.height=14}
 
@@ -405,9 +395,11 @@ fonction_enjeux2 <- function(df, .enjeu) {
     ylab("Prop. annuelle de votes 'oui'") +
     ggtitle(label = sym(.enjeu_long)) +
     facet_wrap(~pays, scales = "free_x", ncol = 4, nrow = 2) +
-    scale_y_continuous(labels = scales::percent,
-                       limits = c(0, 1), 
-                       breaks = c(0.25, 0.50, 0.75)) +
+    scale_y_continuous(
+      labels = scales::percent,
+      limits = c(0, 1),
+      breaks = c(0.25, 0.50, 0.75)
+    ) +
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
     theme(strip.placement = "outside")
@@ -423,7 +415,9 @@ patchwork::wrap_plots(graphes_IRL_NOR[c(3, 2, 6, 1, 4, 5)], ncol = 1) + plot_lay
 ```
 
 Analyse - Partie 2: Regroupement des pays à l'ONU selon leurs habitudes de votes
-=============================================================
+================================================================================
+
+
 
 ```{r definition_tableau_pour_regroupement}
 td_long <- onu_large %>%
@@ -467,25 +461,200 @@ regroupements_k <-
     # Extrait un td d'une ligne de l'objet kmeans, incluant tot.withinness
     glanced = map(kclust, glance)
   )
-
-regroupements_k %>%
-  unnest(cols = c(glanced)) %>%
-  ggplot(aes(x = k, y = tot.withinss)) +
-  geom_line(colour = "royalblue4", size = 2, alpha = 0.6) +
-  geom_point(size = 2, colour = "royalblue4") +
-  ggtitle(label = "Définir six regroupements « k »\nsemble optimal.")
 ```
 
-```{r}
-regroupement_final <- kmeans(td_large, centers = 6, nstart = 20) %>%
+```{r regroupements_finaux}
+set.seed(4242)
+regroupement_final <- kmeans(td_large, centers = 6, nstart = 100) %>%
   augment(., td_large) %>%
   rename(
     pays = .rownames,
     cluster = .cluster
   ) %>%
   select(pays, cluster)
+
+# On recrée un tableau avec les proportions de vote par pays x année, avec les regroupements
+
+onu_final <- onu_large %>%
+  filter(year > 2004 & pays != "YUG") %>%
+  group_by(pays) %>%
+  select(c(pays, starts_with("prop"))) %>%
+  rename(prop_total = prop_oui) %>%
+  summarize(across(starts_with("prop"), mean)) %>%
+  ungroup() %>%
+  inner_join(regroupement_final, by = "pays") %>%
+  mutate(pays_long = countrycode(pays, origin = "iso3c", destination = "un.name.fr")) %>%
+  select(pays_long, pays, cluster, prop_total, everything())
 ```
 
+
+```{r clusters_par_ordre}
+
+# On réorganise les clusters par ordre de grandeur
+td_groupe_pays <- onu_final %>%
+  arrange(pays_long) %>%
+  arrange(c(cluster)) %>%
+  group_by(cluster) %>%
+  select(c(pays_long, cluster)) %>%
+  mutate(
+    n_cluster = n_distinct(pays_long),
+    cluster = as.character(cluster)
+  ) %>%
+  arrange(-n_cluster) %>%
+  ungroup()
+
+td_corresp <-
+  tibble(
+    cluster = pull(distinct(td_groupe_pays, cluster)),
+    Groupe = as.character(1L:6L)
+  ) %>%
+  ungroup()
+
+td_groupe_pays <- left_join(td_groupe_pays, td_corresp, by = "cluster")
+onu_final <- left_join(onu_final, td_corresp,
+  x.by = "cluster",
+  y.by = "cluster"
+)
+
+groupe_CAN <- onu_final %>%
+  filter(pays == "CAN") %>%
+  pull(Groupe)
+groupe_CHN <- onu_final %>%
+  filter(pays == "CHN") %>%
+  pull(Groupe)
+groupe_USA <- onu_final %>%
+  filter(pays == "USA") %>%
+  pull(Groupe)
+groupe_FR <- onu_final %>%
+  filter(pays == "FRA") %>%
+  pull(Groupe)
+```
+
+
+```{r, fig.height=12, fig.width=8}
+enjeux <-
+  enjeux %>%
+  mutate(var = str_c("prop_", court))
+
+fn_graphe_kmeans <- function(.var) {
+  .enjeu_long <- enjeux %>%
+    filter(var == (.var)) %>%
+    pull(long)
+
+  ggplot(data = onu_final, aes(x = prop_total, y = !!sym(.var), colour = Groupe)) +
+    geom_point(size = 2, alpha = 0.6) +
+    xlab("Proportion totale de «oui»") +
+    ylab("Proportion de «oui» par enjeu") +
+    ggtitle(label = sym(.enjeu_long)) +
+    scale_y_continuous(
+      labels = scales::percent,
+      limits = c(0, 1),
+      breaks = c(0.25, 0.50, 0.75)
+    ) +
+    scale_color_brewer(palette = "Dark2") +
+    theme(legend.position = "bottom") +
+    theme(strip.text = element_text(hjust = 0.5)) +
+    theme(strip.placement = "inside")
+}
+
+graphe_kmeans <-
+  map(~ fn_graphe_kmeans(.var = .x), .x = enjeux$var)
+
+titre <- c("Le Canada pourrait considérer se rapprocher des groupes 1, 2 ou 3 pour gagner en influence")
+sous_titre <- paste0(
+  "Le Canada est dans le groupe ",
+  groupe_CAN,
+  ", les É-U, dans le ",
+  groupe_USA,
+  ", et la Chine dans le ",
+  groupe_CHN
+)
+
+patchwork::wrap_plots(graphe_kmeans, ncol = 2) +
+  plot_annotation(title = titre, subtitle = sous_titre) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+```{r analyse_gmm}
+td_large_gmm <- td_long %>%
+  pivot_wider(
+    id_cols = pays,
+    names_from = id_vote,
+    values_from = valeur,
+    values_fill = 0
+  ) %>%
+  column_to_rownames("pays") %>%
+  select(order(colnames(.))) %>%
+  mutate(across(where(is.numeric), ~ as.numeric(scale(.))))
+
+gmm_res <- Mclust(td_large_gmm, G = 6)
+gmm_res <-  gmm_res %>% 
+  augment(., td_large_gmm) %>% 
+  rename(
+    pays = .rownames,
+    cluster = .class
+  ) %>%
+  select(pays, cluster)
+```
+
+
+
+
+```{r liste_pays_par_cluster}
+
+liste_groupe_pays <- onu_final %>%
+  arrange(pays_long) %>%
+  arrange(c(cluster)) %>%
+  select(c(pays_long, cluster)) %>%
+  pivot_wider(id_cols = pays_long, names_from = cluster, values_from = pays_long)
+
+groupe_1 <- liste_groupe_pays[[1]] %>% unlist()
+groupe_2 <- liste_groupe_pays[[2]] %>% unlist()
+groupe_3 <- liste_groupe_pays[[3]] %>% unlist()
+groupe_4 <- liste_groupe_pays[[4]] %>% unlist()
+groupe_5 <- liste_groupe_pays[[5]] %>% unlist()
+groupe_6 <- liste_groupe_pays[[6]] %>% unlist()
+
+td_groupe_pays <- onu_final %>%
+  arrange(pays_long) %>%
+  arrange(c(cluster)) %>%
+  group_by(cluster) %>%
+  select(c(pays_long, cluster)) %>%
+  mutate(
+    n_cluster = n_distinct(pays_long),
+    cluster = as.character(cluster)
+  ) %>%
+  arrange(-n_cluster) %>%
+  ungroup()
+
+td_corresp <-
+  tibble(
+    cluster = pull(distinct(td_groupe_pays, cluster)),
+    Groupe = 1:6
+  ) %>%
+  ungroup()
+
+td_groupe_pays <- left_join(td_groupe_pays, td_corresp, by = "cluster")
+```
+
+### Groupe no. 1: États-Unis, Israël, deux Îles du Pacifique
+`r groupe_1`
+
+### Groupe no. 2: Canada, Europe, Japon et Corée du Sud, Australie et Nouvelle-Zélande
+`r groupe_2`
+
+### Groupe no. 3: Chine, Corée du Nord, Vénézuela, Iran... et Arabie Saoudite, Inde, Pakistan
+`r groupe_3`
+
+### Groupe no. 4: Majorité des pays en développement
+`r groupe_4`
+
+### Groupe no. 5: Plusieurs petits États insulaires en développement
+`r groupe_5`
+
+### Groupe no. 6: Soudan du Sud
+`r groupe_6`
 
 Annexe 1: quelques tests
 ======================
@@ -533,7 +702,10 @@ td_resolutions <- onu_large %>%
 
 td_resolutions %>%
   select(., -c(resid, year, short, descr, autre, nb_enjeux)) %>%
-  correlate() %>% shave() %>% fashion()
+  correlate() %>%
+  shave() %>%
+  fashion() %>%
+  kable()
 ```
 
 On peut identifier les pays en développement dont les habitudes de vote sont très semblables à celles de la moyenne des pays en développement.
@@ -566,13 +738,40 @@ rbind(onu_enjeux3, td) %>%
   slice_min(order_by = abs(total), n = 20)
 ```
 
+Sélection du nombre optimal de regroupements
+```{r selection_de_k, fig.width=4, fig.height=4}
+
+regroupements_k %>%
+  unnest(cols = c(glanced)) %>%
+  ggplot(aes(x = k, y = tot.withinss)) +
+  geom_line(colour = "royalblue4", size = 2, alpha = 0.6) +
+  geom_point(size = 2, colour = "royalblue4") +
+  ggtitle(label = "Définir six regroupements « k »\nsemble optimal.") +
+  scale_x_continuous(breaks = c(2, 4, 6, 8))
+```
+
+
 Annex 2: Échantillons du tableau
 ================================
 
 Voici un échantillon du tableau des résolutions. 
 
 ```{r}
-onu_large %>%
-  slice_sample(n = 5) %>%
-  knitr::kable()
+
+fn_impr_tableau2018 <- function(.enjeu) {
+  enjeux %>%
+    filter(court == .enjeu) %>%
+    pull(long) %>%
+    print()
+
+  onu_large %>%
+    filter(year == 2018, !!sym(.enjeu) == 1) %>%
+    group_by(unres) %>%
+    slice_head(n = 1) %>%
+    select(unres, short) %>%
+    arrange(unres, short) %>%
+    kable()
+}
+
+map(~ fn_impr_tableau2018(.x), .x = enjeux$court)
 ```
