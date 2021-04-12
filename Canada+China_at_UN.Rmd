@@ -1,8 +1,8 @@
 ---
 title: "Dans quelle mesure le Canada et les pays avancés ont-ils délaissé le champ normatif à l'ONU au profit de la Chine?"
 author: "François-Philippe Dubé"
-date: "06/04/2021"
-output: odt_document
+date: "11/04/2021"
+output: word_document
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
@@ -21,7 +21,7 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 # new_cache <- wb_cache() # Ne faire qu'une seule fois
 # cache("new_cache") # Ne faire qu'une seule fois
 
-# Télécharger la base de données -- ne faire qu'une seule fois
+# Télécharger la base de données----ne faire qu'une seule fois
 # download.file("https://dataverse.harvard.edu/api/access/datafile/:persistentId?persistentId=doi:10.7910/DVN/LEJUQZ/MLNAHB", "./data/onu_votes.RData")
 # load("./data/onu_votes.RData")
 ```
@@ -29,30 +29,31 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 Le Canada face aux pays en développement à l'ONU
 =============================================
 
-La défaite récente du Canada à l'élection au Conseil de sécurité de l'ONU (au profit des candidatures de la Norvège et de l'Irlande), pose la question du positionnement du Canada face aux pays en développement à l'ONU. De façon plus large, on peut se demander si le pays avancés--particulièrement ceux du G7-- ont bien réussi à répondre aux aspirations exprimées à l'Assemblée générale des Nations unies (AGNU) par les pays en développement, et si la Chine n'est pas plus en phase avec leurs préférences à l'ONU.
+La défaite récente du Canada à l'élection au Conseil de sécurité de l'ONU (au profit des candidatures de la Norvège et de l'Irlande), pose la question du positionnement du Canada face aux pays en développement à l'ONU. De façon plus large, on peut se demander si les pays avancés---particulièrement ceux du G7---ont bien réussi à répondre aux aspirations exprimées à l'Assemblée générale des Nations unies (AGNU) par les pays en développement, et si la Chine n'est pas plus en phase avec leurs préférences à l'ONU.
 
 Plan de l'analyse
 -----------------
 Le présent rapport vise à explorer ces questions à travers les tendances de vote des membres de l'AGNU désagrégées selon six enjeux-types par Erik Voeten de l'université Harvard. Il est structuré comme suit. 
 
-1. Description des données  
-2. Positionnement des pays du G7 et de la Chine par enjeux 
-3. Positionnement du Canada, de l'Irlande et de la Norvège par enjeux 
-4. Classification des pays en développement à l'ONU selon leurs tendances de vote  
-5. Annexes  
+- Description des données  
+- Analyse---Partie 1: Positionnement du G7 et de la Chine, par enjeux  
+- Positionnement du Canada, de l'Irlande et de la Norvège par enjeux  
+- Analyse---Partie 2: Regroupement des pays à l'ONU selon leurs habitudes de votes  
+- Annexes  
 
-1. Description des données
+Description des données
 =================================================
 
 Le chercheur Erik Voeten maintien une base de données de toutes les résolutions votées à l'Assemblée générale des Nations Unies (AGNU) depuis 1946. 
 
-Cette base de données est présevée sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec le livre de codes associé expliquant les variables utilisées.
+Cette base de données est préservée sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec le livre de codes associé expliquant les variables utilisées.
 
 > Erik Voeten "Data and Analyses of Voting in the UN General Assembly," *Routledge Handbook of International Organization*, edited by Bob Reinalda (publié le 27 mai 2013), disponible à SSRN: http://ssrn.com/abstract=2111149.
 
 
 Chaque résolution est associée à un ou plusieurs enjeux particuliers:  
-- Colonialisme  
+
+- Colonialisme
 - Développement économique  
 - Désarmement  
 - Droits de la personne  
@@ -63,9 +64,7 @@ Nous y avons rajouté une septième catégorie, "Autre", pour identifier les ré
 
 On note que certains enjeux importants, comme les changements climatiques, les migrations, les guerres civiles, etc., qui n'ont eu une importance que récemment, sont absents de cette classification.
 
-***À Noter***: Le paquet **R** `un_votes` sur le dépôt du CRAN contient sensiblement les mêmes données. En dépit du fait qu'elle requiert plus de manipulations, nous lui avons préféré la base de données du dépôt de Harvard, et ce pour deux raisons. D'abord, elle est plus à jour et couvre jusqu'en `r max(completeVotes$year)` (alors que celle du paquet ne couvre que jusqu'à 2015). Ensuite, le codage des enjeux a été fait différemment, permettant la possibilité qu'une résolution couvre plus qu'un enjeu ou qu'elle n'en couvre aucun -- ce qui est plus réaliste -- plutôt que de forcer toutes les résolutions à entrer dans une seule catégorie.
-
-Nous présentons un échantillon du tableau en annexe. 
+***À Noter***: Le paquet **R** `un_votes` sur le dépôt du CRAN contient sensiblement les mêmes données. En dépit du fait qu'elle requiert plus de manipulations, nous lui avons préféré la base de données du dépôt de Harvard, et ce pour deux raisons. D'abord, elle est plus à jour et couvre jusqu'en `r max(completeVotes$year)` (alors que celle du paquet ne couvre que jusqu'à 2015). Ensuite, le codage des enjeux a été fait différemment, permettant la possibilité qu'une résolution couvre plus qu'un enjeu ou qu'elle n'en couvre aucun---ce qui est plus réaliste---plutôt que de forcer toutes les résolutions à entrer dans une seule catégorie.
 
 ```{r def_enjeux}
 
@@ -158,7 +157,7 @@ onu_large <-
 ```
 
 
-Le tableau contient `r onu_large %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, réparties en `r dim(onu_large)[1]` enregistrements.  
+Le tableau contient `r onu_large %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, réparties en `r dim(onu_large)[1]` enregistrements. Nous en présentons un échantillon du tableau en annexe. 
 
 
 ```{r definitions_pays}
@@ -186,7 +185,7 @@ if (!exists("pays")) {
   cache("pays")
 }
 
-# Les pays en développement -- on en fait des vecteurs
+# Les pays en développement----on en fait des vecteurs
 dev <- pays %>%
   filter(income_level_iso3c != "HIC") %>%
   pull("iso3c")
@@ -205,14 +204,14 @@ umic <- pays %>%
 Analyse - Partie 1: Positionnement du G7 et de la Chine, par enjeux
 =====================================================================
 
-Dans quelle mesure le tableau d'ensemble qui se dessine résolution après résolution des votes du Canada à l'AGNU correspond-il à l'image que les Canadiens s'en font? Dans quelle mesure le Canada a-t-il un comportement différent de celui des autres pays du G7 à l'AGNU? Et où la Chine se situe-t-elle par rapport aux États-Unis et aux autres pays du G7 sur les différents enjeux répértoriés?
+Dans quelle mesure le tableau d'ensemble qui se dessine résolution après résolution des votes du Canada à l'AGNU correspond-il à l'image que les Canadiens s'en font? Dans quelle mesure le Canada a-t-il un comportement différent de celui des autres pays du G7 à l'AGNU? Et où la Chine se situe-t-elle par rapport aux États-Unis et aux autres pays du G7 sur les différents enjeux répertoriés?
 
 Par rapport au G7: Le Canada est devenu le second pays le plus conservateur
 ---------------------------------------------------------------
 
 **De façon générale, La Chine vote beaucoup plus souvent en faveur des propositions de l'AGNU que les pays du G7.** À l'inverse, comme on peut le voir ci-dessous, les États-Unis sont le pays le plus conservateur à l'AGNU parmi les pays du G7, *tous enjeux confondus*. Le fait que le Japon soit le pays le plus libéral du G7 semble cohérent avec sa doctrine de promotion du "soft power" dans ses relations internationales. 
 
-La position du Canada à l'AGNU a progressivement décliné depuis 2005, année marquant le début du premier mandat du gouvernement conservateur de Stephen Haper. L'arrivée au pouvoir du gouvernement libéral de Justin Trudeau en 2015 est accompagnée d'une remontée dans la proportion de votes en faveur des résolutions à l'AGNU. Cependant, le Canada demeurait, en 2017 et 2018, moins enclin à appuyer ces résolutions que les autres pays du G7.
+La position du Canada à l'AGNU a progressivement décliné depuis 2005, année marquant le début du premier mandat du gouvernement conservateur de Stephen Harper. L'arrivée au pouvoir du gouvernement libéral de Justin Trudeau en 2015 est accompagnée d'une remontée dans la proportion de votes en faveur des résolutions à l'AGNU. Cependant, le Canada demeurait, en 2017 et 2018, moins enclin à appuyer ces résolutions que les autres pays du G7.
 
 
 ```{r position_can_us_zh, fig.height=6, fig.width=8, message=FALSE, warning=FALSE}
@@ -278,7 +277,7 @@ onu_enjeux <- onu_large %>%
   mutate(prop_oui = mean(vote_long == "Pour"))
 
 
-# Définition d'une fonction graphique générique -- source:
+# Définition d'une fonction graphique générique----source:
 # https://stackoverflow.com/questions/4856849/looping-over-variables-in-ggplot,
 # answered Aug 27 '18 at 19:10 by Tung
 
@@ -414,24 +413,43 @@ patchwork::wrap_plots(graphes_IRL_NOR[c(3, 2, 6, 1, 4, 5)], ncol = 1) + plot_lay
   )
 ```
 
-Analyse - Partie 2: Regroupement des pays à l'ONU selon leurs habitudes de votes
+Analyse---Partie 2: Regroupement des pays à l'ONU selon leurs habitudes de votes
 ================================================================================
 
-Nous avons regroupé les pays selon leurs habitudes de votes entre 2005 et 2018 d'après un algorithme de regroupement (*clustering en anglais*). D'après le *critère d'information de Bayes*, le nombre optimal de regroupements est de six.
+Les pays développés sont acquis au Canada, sauf possiblement dans les situations de compétition directe avec l'un d'eux, comme ce fut le cas récemment pour l'élection au siège au Conseil de sécurité. Le plein d'appuis reste à aller chercher du côté des pays en développement.
 
-Quelques particularités à noter:
+Les raisons pour lesquelles un pays décide de prendre une position à l'ONU face à un enjeu particulier relèvent autant de la politique intérieure que des jeux d'alliances et de son positionnement face au développement d'un système international fondé sur les règles.
 
-- **La grande majorité des pays en développement votent à l'AGNU de façon assez homogène**. Il s'agit du groupe 1 dans la série de graphiques ci-dessous, qui comprend 122 pays, incluant les BRICS. Les enjeux du Moyen-Orient et du nucléaire sont à toute fin pratique les seuls où existe une certaine variabilité dans leur vote.
+**À supposer que le Canada désire élargir le nombre de pays en développement qui l'appuieraient à l'AGNU à l'avenir, il pourrait délibérément à moduler ses préférences de vote sur certains enjeux.** Dans la mesure où cet appui pourrait dépendre au moins partiellement d'une similitude de vues avec eux, une position moins conservatrice sur des enjeux choisis permettrait de préparer le terrain à la collaboration. Pour étudier cette question, nous avons constitué six groupes de pays à l'ONU à partir de leurs habitudes de vote à l'AGNU. 
 
-** Un second groupe de pays en développement se distingue par son attitude plus conservatrice sur tous les enjeux.** Il s'agit du groupe 4, composé de dix pays d'Afrique subsaharienne continentale et de six petits États insulaires en développement (PEID). 
+**Le Canada pourrait vouloir émuler deux groupes de pays.** L'un d'entre eux est le groupe comprenant la grande majorité des pays développés, et par rapport auquel le comportement du Canada est assez différent. Ce rapprochement serait naturel, d'autant qu'il correspondrait à la tendance historique du Canada jusqu'à au moins 2005. 
 
-** Les pays développés votent presque tous en bloc.** Ce groupe (no. 2, comprenant 46 pays) inclut toute l'Europe, le Japon et la Corée du Sud. Y font également partie l'Ukraine, la Pologne et la Hongrie. 
+L'autre groupe dont le potentiel serait à explorer est composé d'une quinzaine de pays en développement plus conservateurs que les autres pays en développement, mais moins que ne l'est le Canada. 
 
-** Le Canada est dans un groupe restreint de cinq pays** (groupe no. 3) comprenant également l'Australie, et trois (PEID): la Micronésie, les Îles Marshall, et Palaos.
+Par ailleurs, du point de vue (uniquement) de la réduction de l'écart moyen avec la position des pays en développement, en laissant de côté les résolutions portant sur le Moyen-Orient, les enjeux du *colonialisme* et des *droits de la personne* pourraient mériter un assouplissement de la position canadienne. 
 
-** Les États-Unis et Israël forment un groupe à part.** Ces deux pays (qui forment le groupe no. 5) ont tendance à rejeter en bloc toutes les résolutions présentées à l'AGNU.
+Ces résultats sont présentés ci-après.
 
-**Le Soudan du Sud forme un groupe à lui tout seul.** Ce pays se distingue en effet par son grand nombre d'absences ou d'abstention aux votes de l'AGNU.
+Approche pour le regroupement
+------------------------------
+
+Nous avons regroupé les pays selon leurs habitudes de votes entre 2005 et 2018 d'après un algorithme de regroupement (*clustering en anglais*). L'algorithme utilisé, `Mclust`, utilise un modèle de mélange gaussien dont les résultats sont assez robustes. D'après le *critère d'information de Bayes*, le nombre optimal de regroupements est de six. 
+
+Quelques résultats sont à noter:
+
+- **La grande majorité des pays en développement votent à l'AGNU de façon assez homogène**. Il s'agit du groupe 1 dans la série de graphiques ci-dessous, qui comprend 122 pays. Ce groupe inclut un vaste éventail de pays, notamment les BRICS. Les enjeux du Moyen-Orient et du nucléaire sont à toute fin pratique les seuls où existe une certaine variabilité dans leur vote.
+
+- **Un second groupe de pays en développement se distingue par son attitude plus conservatrice sur tous les enjeux.** Il s'agit du groupe 4, composé de dix pays d'Afrique subsaharienne continentale et de six petits États insulaires en développement (PEID). Un rapprochement plus ou moins explicite pourrait être fait avec ces pays sur plusieurs enjeux.
+
+- **Les pays développés votent presque tous en bloc.** Ce groupe (no. 2, comprenant 46 pays) inclut toute l'Europe, le Japon et la Corée du Sud. Y font également partie l'Ukraine, la Pologne et la Hongrie. 
+
+- **Le Canada est dans un groupe restreint de cinq pays** (groupe no. 3) comprenant également l'Australie, et trois (PEID): la Micronésie, les Îles Marshall, et Palaos. 
+
+- **Les États-Unis et Israël forment un groupe à part.** Ces deux pays (qui forment le groupe no. 5) ont tendance à rejeter en bloc toutes les résolutions présentées à l'AGNU.
+
+- **Le Soudan du Sud forme un groupe à lui tout seul.** Ce pays se distingue en effet par son grand nombre d'absences ou d'abstention aux votes de l'AGNU.
+
+Ces regroupements sont présentés en détail en annexe.
 
 
 ```{r definition_tableau_pour_regroupement}
@@ -468,7 +486,9 @@ td_large_gmm <- td_long %>%
 ```{r regroupements_finaux}
 set.seed(420)
 
-gmm_res <- Mclust(td_large_gmm, G = 6) %>% 
+gmm_modele <- Mclust(td_large_gmm, G = 6)
+
+gmm_res <- gmm_modele %>% 
   augment(., td_large_gmm) %>% 
   rename(
     pays = .rownames,
@@ -555,63 +575,132 @@ patchwork::wrap_plots(graphe_mclust, ncol = 2) +
 ```
 
 
-```{r liste_pays_par_cluster}
+Annexe 1: Groupes de pays
+==========================
 
-liste_groupe_pays <- onu_final %>%
-  arrange(pays_long) %>%
-  arrange(c(cluster)) %>%
-  select(c(pays_long, cluster)) %>%
-  pivot_wider(id_cols = pays_long, names_from = cluster, values_from = pays_long)
+```{r listes_pays}
+groupe1 <- onu_final %>% 
+  arrange(pays_long) %>% 
+  filter(Groupe == 1) %>% 
+  pull(pays_long)
 
-groupe_1 <- liste_groupe_pays[[1]] %>% unlist()
-groupe_2 <- liste_groupe_pays[[2]] %>% unlist()
-groupe_3 <- liste_groupe_pays[[3]] %>% unlist()
-groupe_4 <- liste_groupe_pays[[4]] %>% unlist()
-groupe_5 <- liste_groupe_pays[[5]] %>% unlist()
-groupe_6 <- liste_groupe_pays[[6]] %>% unlist()
+groupe2 <- onu_final %>% 
+  arrange(pays_long) %>% 
+  filter(Groupe == 2) %>% 
+  pull(pays_long)
 
-td_groupe_pays <- onu_final %>%
-  arrange(pays_long) %>%
-  arrange(c(cluster)) %>%
-  group_by(cluster) %>%
-  select(c(pays_long, cluster)) %>%
-  mutate(
-    n_cluster = n_distinct(pays_long),
-    cluster = as.character(cluster)
-  ) %>%
-  arrange(-n_cluster) %>%
-  ungroup()
+groupe3 <- onu_final %>% 
+  arrange(pays_long) %>% 
+  filter(Groupe == 3) %>% 
+  pull(pays_long)
 
-td_corresp <-
-  tibble(
-    cluster = pull(distinct(td_groupe_pays, cluster)),
-    Groupe = 1:6
-  ) %>%
-  ungroup()
+groupe4 <- onu_final %>% 
+  arrange(pays_long) %>% 
+  filter(Groupe == 4) %>% 
+  pull(pays_long)
 
-td_groupe_pays <- left_join(td_groupe_pays, td_corresp, by = "cluster")
+groupe5 <- onu_final %>% 
+  arrange(pays_long) %>% 
+  filter(Groupe == 5) %>% 
+  pull(pays_long)
+
+groupe6 <- onu_final %>% 
+  arrange(pays_long) %>% 
+  filter(Groupe == 6) %>% 
+  pull(pays_long)
 ```
 
-### Groupe no. 1: États-Unis, Israël, deux Îles du Pacifique
-`r groupe_1`
+### Groupe 1: majorité des pays en développement
+`r groupe1`  
 
-### Groupe no. 2: Canada, Europe, Japon et Corée du Sud, Australie et Nouvelle-Zélande
-`r groupe_2`
+### Groupe 2: Europe, Japon et Corée, NZ, Turquie
+`r groupe2`  
 
-### Groupe no. 3: Chine, Corée du Nord, Vénézuela, Iran... et Arabie Saoudite, Inde, Pakistan
-`r groupe_3`
+### Groupe 3: Canada, Australie et trois Îles du Pacifique
+`r groupe3`  
 
-### Groupe no. 4: Majorité des pays en développement
-`r groupe_4`
+### Groupe 4: Quelques pays africains et quelques PEID
+`r groupe4`  
 
-### Groupe no. 5: Plusieurs petits États insulaires en développement
-`r groupe_5`
+### Groupe 5: États-Unis et Israël
+`r groupe5`  
 
-### Groupe no. 6: Soudan du Sud
-`r groupe_6`
+### Groupe 6: Soudan du Sud
+`r groupe6`  
 
-Annexe 1: quelques tests
+
+Annexe 2: Échantillons du tableau
+================================
+
+Voici les résolutions de l'AGNU présentées lors de la 73e session (2018), classées par enjeu. Certaines résolutions sont classifiées comme relevant de plus d'un enjeu. Celles ne relevant d'aucun sont classifiées "autre." 
+
+```{r}
+
+echantillon <- 
+  onu_large %>%
+  filter(year == 2018) %>%
+  group_by(unres) %>%
+  slice_head(n = 1) %>%
+  select(unres, 
+         short,
+         moyen_orient,
+         droit_pers,
+         nucleaire,
+         colonialisme,
+         dev_econ,
+         desarmement,
+         autre) %>%
+  arrange(unres, short)
+
+# Désarmement
+echantillon %>% 
+  filter(desarmement == 1) %>% 
+  select(unres, short) %>% 
+  kable(., caption = "Désarmement")
+
+# Développement économique
+echantillon %>% 
+  filter(dev_econ == 1) %>% 
+  select(unres, short) %>% 
+  kable(., caption = "Développement économique")
+
+# Colonialisme
+echantillon %>% 
+  filter(colonialisme == 1) %>% 
+  select(unres, short) %>% 
+  kable(., caption = "Colonialisme")
+
+# Droits de la personne
+echantillon %>% 
+  filter(droit_pers == 1) %>% 
+  select(unres, short) %>% 
+  kable(., caption = "Droits de la personne")
+
+# Moyen-Orient
+echantillon %>% 
+  filter(moyen_orient == 1) %>% 
+  select(unres, short) %>% 
+  kable(., caption = "Moyen-Orient")
+
+# Nucléaire
+echantillon %>% 
+  filter(nucleaire == 1) %>% 
+  select(unres, short) %>% 
+  kable(., caption = "Nucléaire")
+
+# Autre
+echantillon %>% 
+  filter(autre == 1) %>% 
+  select(unres, short) %>% 
+  kable(., caption = "Autre")
+
+```
+
+Annexe 3: quelques tests
 ======================
+
+Distribution et indépendance des enjeux
+--------------------------------------
 
 Les enjeux sont distribués relativement également à travers les années.
 ```{r dist_annuelles_enjeux, warning=FALSE, fig.height=6, fig.width=6}
@@ -648,7 +737,7 @@ resolutions_sommaire %>%
 
 
 Les enjeux ont une faible corrélation entre eux et représentent donc des dimensions distinctes
-```{r}
+```{r correlations_enjeux, message=FALSE}
 # On crée un tableau des résolutions
 td_resolutions <- onu_large %>%
   select(resid, year, importantvote, short, descr, moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux) %>%
@@ -662,70 +751,16 @@ td_resolutions %>%
   kable()
 ```
 
-On peut identifier les pays en développement dont les habitudes de vote sont très semblables à celles de la moyenne des pays en développement.
-```{r}
-onu_enjeux3 <- onu_large %>%
-  mutate(dev = pays %in% dev) %>%
-  group_by(year = year(date), pays) %>%
-  filter(year > 1989) %>%
-  filter(dev == TRUE) %>%
-  summarize(prop_oui = mean(vote_long == "Pour"))
-
-td <- onu_large %>%
-  mutate(dev = pays %in% dev) %>%
-  group_by(year = year(date)) %>%
-  filter(year > 1989) %>%
-  filter(dev == TRUE) %>%
-  summarize(prop_oui = mean(vote_long == "Pour")) %>%
-  mutate(
-    pays = "DEV",
-    pays_long = "DEV"
-  )
-
-rbind(onu_enjeux3, td) %>%
-  group_by(year) %>%
-  select(pays, year, prop_oui) %>%
-  mutate(prop_oui = scale(prop_oui)) %>%
-  ungroup() %>%
-  group_by(pays) %>%
-  summarize(total = sum(prop_oui)) %>%
-  slice_min(order_by = abs(total), n = 20)
-```
 
 Sélection du nombre optimal de regroupements
+-------------------------------------------
+
+D'après le critère d'information de Bayes, six regroupements et le nombre minimal pour minimiser la corrélation entre les groupes. L'un de ces groupes étant le Soudan du Sud, il en reste dans les faits cinq à considérer.
+
 ```{r selection_de_k, fig.width=4, fig.height=4}
 
-regroupements_k %>%
-  unnest(cols = c(glanced)) %>%
-  ggplot(aes(x = k, y = tot.withinss)) +
-  geom_line(colour = "royalblue4", size = 2, alpha = 0.6) +
-  geom_point(size = 2, colour = "royalblue4") +
-  ggtitle(label = "Définir six regroupements « k »\nsemble optimal.") +
-  scale_x_continuous(breaks = c(2, 4, 6, 8))
+Mclust(td_large_gmm) %>% plot(what = "BIC")
+
 ```
 
 
-Annex 2: Échantillons du tableau
-================================
-
-Voici un échantillon du tableau des résolutions. 
-
-```{r}
-
-fn_impr_tableau2018 <- function(.enjeu) {
-  enjeux %>%
-    filter(court == .enjeu) %>%
-    pull(long) %>%
-    print()
-
-  onu_large %>%
-    filter(year == 2018, !!sym(.enjeu) == 1) %>%
-    group_by(unres) %>%
-    slice_head(n = 1) %>%
-    select(unres, short) %>%
-    arrange(unres, short) %>%
-    kable()
-}
-
-map(~ fn_impr_tableau2018(.x), .x = enjeux$court)
-```
