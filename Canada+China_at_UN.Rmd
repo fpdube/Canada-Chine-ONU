@@ -133,6 +133,11 @@ onu_large <- completeVotes %>%
   )
 ```
 
+```{r}
+# Ajout d'un tableau synthétisant les résolutions
+td_resolutions <- onu_large %>% select(-c(vote, vote_long, pays, pays_long, starts_with("prop"))) %>% group_by(resid) %>% slice_head(n = 1) %>% ungroup
+```
+
 ```{r ajout_proportions_par_enjeux, message=FALSE}
 fn_prop_enjeux <- function(df, .enjeu) {
   df %>%
