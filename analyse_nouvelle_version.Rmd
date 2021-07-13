@@ -3,6 +3,7 @@ title: "Dans quelle mesure le Canada et les pays avancés ont-ils délaissé le 
 author: "François-Philippe Dubé"
 date: "11/04/2021"
 output: word_document
+
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
@@ -30,22 +31,30 @@ theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
 Le Canada face aux pays en développement à l'ONU
 =============================================
 
-La défaite récente du Canada à l'élection au Conseil de sécurité de l'ONU (au profit des candidatures de la Norvège et de l'Irlande), pose la question du positionnement du Canada face aux pays en développement à l'ONU. De façon plus large, on peut se demander si les pays avancés---particulièrement ceux du G7---ont bien réussi à répondre aux aspirations exprimées à l'Assemblée générale des Nations unies (AGNU) par les pays en développement, et si la Chine n'est pas plus en phase avec leurs préférences à l'ONU.
+Résumé
+------
+L'analyse d'une base de données des votes à l'Assemblée générale des Nations Unies nous permet de classifier les pays en cinq regroupements stables basés sur leurs habitudes de vote en fonction de six enjeux-clés pour les années 2015-2019. Le Canada, qui se distingue depuis 2006 des pays européens par son attitude sur la question moyen-orientale, se retrouve dans un groupe restreint de quelques pays XXXXXXXXXxx. 
+
+Les pays en développement se séparent en deux groupes principaux. La Chine fait partie du plus nombreux, qui appuie la grande majorité des résolutions de l'AGNU. Cependant, le second groupe est plus modéré dans ses positions et a des positions proches de celles du Canada sur plusieurs enjeux, ce qui offre des possibilités diplomatiques et pourrait permettre d'étendre le concept de « pays aux vues similaires ».
+
 
 Plan de l'analyse
 -----------------
-Le présent rapport vise à explorer ces questions à travers les tendances de vote des membres de l'AGNU désagrégées selon six enjeux-types par Erik Voeten de l'université Harvard. Il est structuré comme suit. 
+ 1. Description des données
+ 2. Classification des pays à l'ONU en fonction de leurs habitudes de vote
+ 3. Le G7 comparé aux autres pays
 
-- Description des données  
-- Analyse---Partie 1: Positionnement du G7 et de la Chine, par enjeux  
-- Positionnement du Canada, de l'Irlande et de la Norvège par enjeux  
-- Analyse---Partie 2: Regroupement des pays à l'ONU selon leurs habitudes de votes  
-- Annexes  
+Annexes:
+
+ - Regroupements de pays
+ - Échantillon du tableau
+ - Quelques tests
+ 
 
 Description des données
 =================================================
 
-Le chercheur Erik Voeten maintien une base de données de toutes les résolutions votées à l'Assemblée générale des Nations Unies (AGNU) depuis 1946. 
+Le chercheur Erik Voeten maintient une base de données de toutes les résolutions votées à l'Assemblée générale des Nations Unies (AGNU) depuis 1946. 
 
 Cette base de données est préservée sur le [*dataverse* de l'Université Harvard](https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379), avec le livre de codes associé expliquant les variables utilisées.
 
@@ -55,11 +64,11 @@ Cette base de données est préservée sur le [*dataverse* de l'Université Harv
 Chaque résolution est associée à un ou plusieurs enjeux particuliers:  
 
 - Colonialisme
-- Développement économique  
-- Désarmement  
-- Droits de la personne  
-- Moyen-Orient  
-- Nucléaire  
+- Développement économique
+- Désarmement
+- Droits de la personne
+- Moyen-Orient
+- Nucléaire
 
 Nous y avons rajouté une septième catégorie, "Autre", pour identifier les résolutions n'entrant dans aucune des catégories ci-dessus.  
 
@@ -217,7 +226,7 @@ umic <- pays %>%
 ```
 
 
-Analyse - Partie 1: Positionnement du G7 et de la Chine, par enjeux
+Analyse — Partie 1: Positionnement du G7 et de la Chine, par enjeux
 =====================================================================
 
 Dans quelle mesure le tableau d'ensemble qui se dessine résolution après résolution des votes du Canada à l'AGNU correspond-il à l'image que les Canadiens s'en font? Dans quelle mesure le Canada a-t-il un comportement différent de celui des autres pays du G7 à l'AGNU? Et où la Chine se situe-t-elle par rapport aux États-Unis et aux autres pays du G7 sur les différents enjeux répertoriés?
@@ -502,7 +511,7 @@ td_large_gmm <- td_long %>%
 ```{r regroupements_finaux}
 set.seed(420)
 
-gmm_modele <- Mclust(td_large_gmm, G = 6)
+gmm_modele <- Mclust(td_large_gmm, G = 5)
 
 gmm_res <- gmm_modele %>% 
   augment(., td_large_gmm) %>% 
