@@ -4,18 +4,16 @@ data_loading_header: TRUE
 data_ignore:
 cache_loading: TRUE
 recursive_loading: FALSE
-munging: TRUE
+munging: FALSE
 logging: FALSE
 logging_level: INFO
 load_libraries: TRUE
-libraries: mclust, 
-       tidyverse, stringr, lubridate,
-       unvotes, wbstats, countrycode, 
-       esquisse, skimr, usethis, tidyr, 
-       gghighlight, ggthemes, cowplot, patchwork, broom, corrr, tidyselect, knitr
+libraries: mclust, tidyverse, lubridate, unvotes, wbstats, countrycode,
+       esquisse, skimr, usethis, gghighlight, ggthemes, cowplot, patchwork, 
+       broom, corrr, tidyselect, knitr, rnaturalearth, sf, factoextra
 as_factors: FALSE
 tables_type: tibble
-attach_internal_libraries: FALSE
+attach_internal_libraries: TRUE
 cache_loaded_data: TRUE
 sticky_variables: NONE
 underscore_variables: TRUE
