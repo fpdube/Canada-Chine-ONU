@@ -12,7 +12,7 @@ enjeux <- tibble(
   long = c(
     "Autre",
     "Colonialisme",
-    "Désarmement",
+    "Contrôle des armes et désarmement",
     "Développement économique",
     "Droits de la personne",
     "Moyen-Orient",

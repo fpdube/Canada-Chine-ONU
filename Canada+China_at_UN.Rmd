@@ -13,18 +13,16 @@ library(ProjectTemplate)
 load.project() # Charge toutes les bibliothèques de cette analyse, définies dans ./config/global.dcf
 
 # Options de base
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.height = 8,
+	fig.width = 8,
+	warning = FALSE,
+	cache = TRUE
+)
 knitr::opts_chunk$set(fig.width = 8, fig.height = 8)
 knitr::opts_chunk$set(cache = TRUE, warning = FALSE)
 theme_set(theme_minimal()) # Définit le thème utilisé pour les graphiques
-
-# Télécharger une base de données d'indicateurs de la Banque mondiale
-# new_cache <- wb_cache() # Ne faire qu'une seule fois
-# cache("new_cache") # Ne faire qu'une seule fois
-
-# Télécharger la base de données----ne faire qu'une seule fois
-# download.file("https://dataverse.harvard.edu/dataset.xhtml?persistentId=hdl:1902.1/12379#", "./data/completeVotes.RData")
-# load("./data/completeVotes.RData")
 ```
 
 Le Canada face aux pays en développement à l'ONU
@@ -65,156 +63,9 @@ Nous y avons rajouté une septième catégorie, "Autre", pour identifier les ré
 
 On note que certains enjeux importants, comme les changements climatiques, les migrations, les guerres civiles, etc., qui n'ont eu une importance que récemment, sont absents de cette classification.
 
-***À Noter***: Le paquet **R** `un_votes` sur le dépôt du CRAN contient sensiblement les mêmes données. En dépit du fait qu'elle requiert plus de manipulations, nous lui avons préféré la base de données du dépôt de Harvard, et ce pour deux raisons. D'abord, elle est plus à jour et couvre jusqu'en `r max(completeVotes$year)` (alors que celle du paquet ne couvre que jusqu'à 2015). Ensuite, le codage des enjeux a été fait différemment, permettant la possibilité qu'une résolution couvre plus qu'un enjeu ou qu'elle n'en couvre aucun---ce qui est plus réaliste---plutôt que de forcer toutes les résolutions à entrer dans une seule catégorie.
+***À Noter***: Le paquet **R** `un_votes` sur le dépôt du CRAN contient sensiblement les mêmes données. En dépit du fait qu'elle requiert plus de manipulations, nous lui avons préféré la base de données du dépôt de Harvard, et ce pour deux raisons. D'abord, elle est plus à jour et couvre jusqu'en `r max(completeVotes$year)` (alors que celle du paquet ne couvre que jusqu'à 2015). Ensuite, le codage des enjeux a été fait différemment, permettant qu'une résolution couvre plus d'un enjeu ou qu'elle n'en couvre aucun – ce qui est plus réaliste – plutôt que de forcer toutes les résolutions à entrer dans une seule catégorie.
 
-```{r def_enjeux}
-
-## Définition des enjeux pour les passer en boucle
-enjeux <- tibble(
-  court = c(
-    "autre",
-    "colonialisme",
-    "desarmement",
-    "dev_econ",
-    "droit_pers",
-    "moyen_orient",
-    "nucleaire"
-  ),
-  long = c(
-    "Autre",
-    "Colonialisme",
-    "Désarmement",
-    "Développement économique",
-    "Droits de la personne",
-    "Moyen-Orient",
-    "Nucléaire"
-  )
-)
-```
-
-
-```{r def_onu_large}
-
-# On recode certaines valeurs et renomme les variables d'enjeux et de pays
-onu_large <- completeVotes %>%
-  mutate(vote_long = factor(vote, labels = c("Pour", "Abstention", "Contre", "Absent", "Non membre"))) %>%
-  
-  rename(
-    moyen_orient = me,
-    nucleaire = nu,
-    desarmement = di,
-    droit_pers = hr,
-    colonialisme = co,
-    dev_econ = ec,
-    pays = Country,
-    pays_long = Countryname
-  ) %>%
-  
-  # On convertit les colonnes temporelles
-  mutate(
-    date = ymd(date)
-  ) %>% 
-  
-  # On ajoute un enjeu "autre"
-  mutate(
-    nb_enjeux = (moyen_orient + nucleaire +
-      desarmement +
-      droit_pers +
-      colonialisme +
-      dev_econ),
-    autre = if_else(nb_enjeux == 0, 1, 0)
-  ) %>%
-  
-  # On enlève les "votes" des non-membres et les résolutions identiques (3%)
-  filter(vote != 9 & ident == 0) %>%
-  
-  # On mesure la proportion de votes "en faveur" des résolutions de l'AGNU tous
-  # enjeux confondus par pays et par session.
-  group_by(year, pays) %>%
-  mutate(prop_oui = mean(vote_long == "Pour")) %>%
-  ungroup() %>%
-  
-  # On reformate le tableau le tableau en y enlevant les variables redondantes
-  select(
-    resid, vote_long, year, pays, prop_oui, importantvote, short,
-    moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre,
-    nb_enjeux,
-    everything(),
-    -rcid, -amend, -member, -ccode, -ident
-  )
-```
-
-```{r}
-# Création d'un tableau synthétisant les résolutions
-td_resolutions <- onu_large %>% select(-c(vote, vote_long, pays, pays_long, starts_with("prop"))) %>% group_by(resid) %>% slice_head(n = 1) %>% ungroup
-```
-
-```{r ajout_proportions_par_enjeux, message=FALSE}
-fn_prop_enjeux <- function(df, .enjeu) {
-  df %>%
-    group_by(year, pays) %>%
-    summarize(
-      !!sym(str_c("prop_", .enjeu)) :=
-        sum((vote_long == "Pour") * !!sym(.enjeu)) / sum(!!sym(.enjeu))
-    )
-}
-
-# On crée une liste de tableaux...
-liste_resumes <- map(~ fn_prop_enjeux(onu_large, .enjeu = .x), .x = enjeux$court)
-
-# ... qu'on fusionne avec la fonction purrr::reduce ...
-td_resumes <-
-  liste_resumes %>% reduce(inner_join, by = c("year", "pays"))
-
-# ... et qu'on réintègre dans onu_large
-onu_large <-
-  onu_large %>%
-  left_join(., td_resumes, by = c("year", "pays"))
-```
-
-
-Le tableau contient `r onu_large %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, réparties en `r dim(onu_large)[1]` enregistrements. Nous présentons un échantillon du tableau en annexe. 
-
-
-```{r definitions_pays}
-# Dans cette section, on crée des "vecteurs" contenant différents regroupements de pays
-
-g7 <- c(
-  "Canada", "France", "Germany", "Italy", "Japan", "United Kingdom",
-  "United States"
-) %>%
-  countrycode(., origin = "country.name", destination = "iso3c")
-
-g20 <- c("Argentina", "Australia", "Brazil", "Canada", "China", "France", "Germany", "India", "Indonesia", "Italy", "Japan", "Mexico", "Netherlands", "Russia", "Saudi Arabia", "Singapore", "South Africa", "South Korea", "Spain", "Switzerland", "Turkey", "United Kingdom", "United States") %>% countrycode(., origin = "country.name", destination = "iso3c")
-
-# Pour l'Afrique sub-saharienne, on utilise la base de données du paquet countrycode
-afr <- countrycode::codelist_panel %>%
-  filter(year == 2020 & region == "Sub-Saharan Africa" & !is.na(iso3c)) %>%
-  pull(iso3c) # dplyr::pull permet de retourner un vecteur
-
-# Pour les pays en développement, on génère un tableau de la
-# Banque mondiale et on en extrait les pays en développement (il y en a 218)
-if (!exists("pays")) {
-  pays <- wb_countries() %>%
-    filter(income_level != "Aggregates") %>%
-    select(-c(capital_city, contains("_iso2c"), contains("admin_")))
-  cache("pays")
-}
-
-# Les pays en développement----on en fait des vecteurs
-dev <- pays %>%
-  filter(income_level_iso3c != "HIC") %>%
-  pull("iso3c")
-lic <- pays %>%
-  filter(income_level_iso3c == "LIC") %>%
-  pull("iso3c")
-lmic <- pays %>%
-  filter(income_level_iso3c == "LMC") %>%
-  pull("iso3c")
-umic <- pays %>%
-  filter(income_level_iso3c == "UMC") %>%
-  pull("iso3c")
-```
+Le tableau contient `r onu %>% pull(resid) %>% unique() %>% length()` résolutions distinctes depuis 1946, réparties en `r dim(onu)[1]` enregistrements. Nous présentons un échantillon du tableau en annexe. 
 
 
 Analyse - Partie 1: Positionnement du G7 et de la Chine, par enjeux
@@ -232,14 +83,14 @@ La position du Canada à l'AGNU a progressivement décliné depuis 2005, année 
 
 ```{r position_can_us_zh, fig.height=6, fig.width=8, message=FALSE, warning=FALSE}
 # # Note méthodologique: pour mesurer la proportion de votes "en faveur" des
-# motions de l'AGNU tous enjeux confondus, on doit utiliser onu_large, puisque
+# motions de l'AGNU tous enjeux confondus, on doit utiliser onu, puisque
 # "onu" (au format long) a un nombre variable d'enjeux (et donc de lignes) pour
 # chaque résolution qui fausse le calcul des proportions. Nous avons déjà
 # calculé cette proportion plus haut.
 
 # On définit un sous-tableau qui fait la moyenne des pays du G7 outre CAN et USA
 td_G5 <-
-  onu_large %>%
+  onu %>%
   group_by(year = year(date)) %>%
   filter(year > 1999 & pays %in% c("DEU", "FRA", "GBR", "ITA", "JPN")) %>%
   summarize(
@@ -250,7 +101,7 @@ td_G5 <-
   )
 
 # Graphique G7 et Chine
-onu_large %>%
+onu %>%
   group_by(year = year(date), pays) %>%
   filter(year > 1999 & pays %in% c("CAN", "CHN", "USA")) %>%
   select(pays, year, prop_oui) %>%
@@ -287,7 +138,7 @@ onu_large %>%
 
 ```{r prep_graphique_par_enjeux, fig.width=6, fig.height=16}
 # Définition d'un jeu de données plus restreint
-onu_enjeux <- onu_large %>%
+onu_enjeux <- onu %>%
   group_by(year = year(date), pays) %>%
   filter(year > 1999 & pays %in% c(g7, "CHN")) %>%
   mutate(prop_oui = mean(vote_long == "Pour"))
@@ -359,7 +210,7 @@ Comment l'Irlande, la Norvège, et les pays en développement se situent-ils fac
 
 ```{r irlande_norvege, fig.width=6, fig.height=14}
 
-onu_enjeux2 <- onu_large %>%
+onu_enjeux2 <- onu %>%
   mutate(
     dev = pays %in% dev,
     lic = pays %in% lic,
@@ -370,7 +221,7 @@ onu_enjeux2 <- onu_large %>%
   filter(year > 1989) %>%
   filter(dev == TRUE || pays %in% c("IRL", "NOR", "CAN"))
 
-# À FAIRE: Maintenant que j'ai intégré les variables prop_[enjeu] dans onu_large,
+# À FAIRE: Maintenant que j'ai intégré les variables prop_[enjeu] dans onu,
 # on pourrait considérablement simplifier les fonctions ci-dessous.
 
 fonction_enjeux2 <- function(df, .enjeu) {
@@ -469,7 +320,7 @@ Ces regroupements sont présentés en détail en annexe.
 
 
 ```{r definition_tableau_pour_regroupement}
-td_long <- onu_large %>%
+td_long <- onu %>%
   filter(year > 2004) %>%
   # Évite les dédoublements, au cas où il y en aurait
   distinct(resid, pays, vote_long) %>%
@@ -513,7 +364,7 @@ gmm_res <- gmm_modele %>%
   select(pays, cluster)
 # On recrée un tableau avec les proportions de vote par pays x année, avec les regroupements
 
-onu_final <- onu_large %>%
+onu_final <- onu %>%
   filter(year > 2004 & pays != "YUG") %>%
   group_by(pays) %>%
   select(c(pays, starts_with("prop"))) %>%
@@ -653,7 +504,7 @@ Voici les résolutions de l'AGNU présentées lors de la 73e session (2018), cla
 ```{r}
 
 echantillon <- 
-  onu_large %>%
+  onu %>%
   filter(year == 2018) %>%
   group_by(unres) %>%
   slice_head(n = 1) %>%
@@ -720,7 +571,7 @@ Distribution et indépendance des enjeux
 
 Les enjeux sont distribués relativement également à travers les années.
 ```{r dist_annuelles_enjeux, warning=FALSE, fig.height=6, fig.width=6}
-resolutions <- onu_large %>%
+resolutions <- onu %>%
   group_by(year, resid) %>%
   select(c(year, resid, importantvote, moyen_orient, nucleaire, desarmement, dev_econ, droit_pers, colonialisme)) %>%
   slice_head(n = 1)
@@ -755,7 +606,7 @@ resolutions_sommaire %>%
 Les enjeux ont une faible corrélation entre eux et représentent donc des dimensions distinctes
 ```{r correlations_enjeux, message=FALSE}
 # On crée un tableau des résolutions
-td_resolutions <- onu_large %>%
+td_resolutions <- onu %>%
   select(resid, year, importantvote, short, descr, moyen_orient, nucleaire, desarmement, droit_pers, colonialisme, dev_econ, autre, nb_enjeux) %>%
   distinct(resid, .keep_all = TRUE)
 
@@ -772,11 +623,5 @@ Sélection du nombre optimal de regroupements
 -------------------------------------------
 
 D'après le critère d'information de Bayes, six regroupements et le nombre minimal pour minimiser la corrélation entre les groupes. L'un de ces groupes étant le Soudan du Sud, il en reste dans les faits cinq à considérer.
-
-```{r selection_de_k, fig.width=4, fig.height=4}
-
-Mclust(td_large_gmm) %>% plot(what = "BIC")
-
-```
 
 
