@@ -97,8 +97,11 @@ td_ocde <- td_ocde[complete.cases(td_ocde),]
 #             D90 = across(prop_oui:prop_nucleaire, ~ quantile(.x, probs = c(0.9)))) |> View()
 ###########################
 
-vec_pm <- PM |> filter(debut > 1989) |> mutate (parti = factor(parti)) |> select(debut, parti) 
-group.colors = c(libéral = "red", conservateur = "blue")
+PM2 <- PM |> filter(debut >= 1984) |> mutate (parti = factor(parti)) |> arrange(debut, fin)
+
+group.colors = c(Libéral = "indianred", Conservateur = "dodgerblue")
+
+# Fonction pour générer les graphiques
 
 fonction_enjeux <- function(df, .enjeu) {
   .enjeu_long <- enjeux %>%
@@ -107,22 +110,37 @@ fonction_enjeux <- function(df, .enjeu) {
   
   
   df %>%
-    ggplot(aes(year, !! sym(str_c("prop_", .enjeu)))) +
-    geom_smooth(colour = "gray") +
-    geom_line(size = 0.8, alpha = 0.8, colour = "black") +
-    geom_vline(data = vec_pm, 
-               aes(xintercept = debut, colour = parti), lty = 2) +
+    ggplot() +
+    
+    geom_rect(
+      data = PM2,
+      aes(xmin = debut,
+          xmax = fin,
+          fill = parti),
+      ymin = -Inf,
+      ymax = Inf,
+      alpha = 0.4
+    ) +
+    
+    geom_smooth(aes(year,!!sym(str_c("prop_", .enjeu))),
+                colour = "gray") +
+    geom_line(aes(year,!!sym(str_c("prop_", .enjeu))),
+              size = 0.8,
+              alpha = 0.8,
+              colour = "black") +
     
     xlab("") +
     ylab("Prop. annuelle de votes « POUR » par enjeu") +
     ggtitle(label = sym(.enjeu_long)) +
-      scale_y_continuous(
+    scale_y_continuous(
       labels = scales::percent,
       limits = c(0, 1),
       breaks = c(0.25, 0.50, 0.75)
     ) +
-    scale_x_continuous(breaks = vec_pm$debut) +
-    scale_color_manual(values=group.colors) +
+    scale_x_continuous(breaks = PM2$debut) +
+    # Pour couper le graphique sans perdre de données: coord_cartesian
+    coord_cartesian(xlim = c(1990, 2018)) +
+    scale_fill_manual(values = group.colors) +
     theme_gray() +
     theme(legend.position = "none") +
     theme(strip.text = element_text(hjust = 0.5)) +
@@ -154,7 +172,7 @@ patchwork::wrap_plots(graphes_can[c(1, 4, 5)], ncol = 3)
 
 
 
-Regroupement des pays à l'ONU d'après leurs habitudes de vote | 2015 à 2018 : quatre années de données depuis\nl'élection du gouvernement libéral
+Regroupement des pays à l'ONU d'après leurs habitudes de vote | Quatre années de données: de l'élection de 2015 à 2018
 =============================================================
 
 
@@ -295,18 +313,20 @@ monde %>%
 Les pays en développement se divisent en trois groupes principaux {.columns-2}
 -------------------------------------------------------
 
-**Groupe 1: le plus progressiste** : 84 pays incluant plusieurs de nos partenaires économiques ou de développement.
+**Groupe 1: le plus progressiste** 
 
+ - 84 pays incluant plusieurs de nos partenaires économiques ou de développement.
  - Majorité de l'Afrique, 
  - Mongolie, Indonésie  
- - Pays du Golfe
+ - Quelques pays développés (Golfe)
  
-**Groupe 3: le plus militant** : 16 pays
+**Groupe 3: le plus militant**
 
- -  Chine, Cuba, Corée du Nord, Russie, Iran, Inde, etc.
+ -  16 pays incluant Chine, Cuba, Corée du Nord, Russie, Iran, Inde, etc.
  
-**Groupe 4: un groupe moins radical** : 26 pays, dont plusieurs SIDS, aux positions plus conservatrices sur le colonialisme et le Moyen-Orient. 
+**Groupe 4: un groupe moins radical** 
 
+ - 26 pays, dont plusieurs SIDS, aux positions plus conservatrices sur le colonialisme et le Moyen-Orient
  - Haïti et la majorité des Îles du Pacifique 
  - Cameroun, Ghana, RDC et quelques pays d'Afrique centrale.
  
@@ -314,33 +334,33 @@ Les pays en développement se divisent en trois groupes principaux {.columns-2}
 Les groupes de pays développés se divisent aussi en trois groupes inégaux
 ---------------------------------------------------
 
-**Groupe 5: La quasi-totalité du CAD de l'OCDE** : 
+**Groupe 5: La quasi-totalité du CAD de l'OCDE**
 
- - 47 pays incluant toute l'Europe, la Turquie, Australie et NZ, Corée du Sud et Japon.
+ - 47 pays incluant toute l'Europe, la Turquie, Australie et NZ, Corée du Sud et Japon
 
-**Groupe 7: Le Canada et trois SIDS** : 
+**Groupe 7: Le Canada et trois SIDS** 
 
  - Micronésie, Îles Marshall, Palaos.
 
-**Groupe 9: Les É-U et Israël**.
+**Groupe 9: Les É-U et Israël**
 
 
 On trouve trois autres petits groupes
 ------------------------------------
 
-**Groupe 8: PD proches de la position canadienne** : 
+**Groupe 8: Pays en développement proches de la position canadienne**
 
- - cinq SIDS (Dominique, Grenade, Nauru, Sao Tomé-et-Principe, Seychelles)
+ - Cinq SIDS (Dominique, Grenade, Nauru, Sao Tomé-et-Principe, Seychelles)
  - Soudan du Sud, Niger
 
-**Groupe 6: pays conservateurs quant au développement économique**  
+**Groupe 6: pays conservateurs quant au développement économique**
 
  - Gabon, Gambie, Guinée équatoriale, Rwanda, Somalie.
 
 **Groupe 2: Zimbabwe** 
 
 
-Le Canada est proche de la position des autres pays du CAD (Gr. 5) sur trois enjeux | Il est également proche du Gr. 8
+Le Canada est proche de la position des autres pays du CAD (Groupe 5) sur trois enjeux | Il est également proche du Groupe 8
 ------------------------------------------------------------
 
 ```{r, prep_boxplot, echo=FALSE, message=FALSE}
@@ -362,9 +382,12 @@ fn_graphique_boxplot <- function(df, .enjeu) {
       colour = Groupe
     )) +
     
-    geom_boxplot() +
-    #geom_jitter(heigth = 0.2, alpha = 0.3, size = 3, color = "black") +
-    #   theme(legend.position = "right") +
+    geom_boxplot(outlier.shape = NA) +
+    
+    geom_jitter(heigth = 0.2, width = 0.2,
+                alpha = 0.2, size = 1.5, color = "black") +
+    
+    theme(legend.position = "right") +
     
     # geom_dotplot(
     #   data = (onu_final %>% filter(pays == "CAN")),
@@ -375,7 +398,7 @@ fn_graphique_boxplot <- function(df, .enjeu) {
     #   binwidth = 0.05
     # ) +
   
-  ggforce::geom_mark_rect(aes(
+   ggforce::geom_mark_rect(aes(
     fill = "indianred1",
     filter = pays_long == "Canada",
     label = pays_long,
@@ -413,7 +436,7 @@ graphes_boxplot <-
 patchwork::wrap_plots(graphes_boxplot[c(4, 3, 7)], ncol = 3) + plot_layout(guides = "collect")
 ```
 
-La position canadienne sur le Moyen-Orient et les droits de la personne est alignée sur le Gr. 9 | Le Gr. 8 partage la position canadienne sur le colonialisme
+La position canadienne sur le Moyen-Orient et les droits de la personne est alignée sur le Groupe 9 | Le Groupe 8 partage la position canadienne sur le colonialisme
 ----------------------------------------
 ```{r, boxplot_canada_près_du_groupe3, echo=FALSE, message=FALSE, fig.width=10.5}
 patchwork::wrap_plots(graphes_boxplot[c(2, 5, 6)], ncol = 3) + plot_layout(guides = "collect") 
