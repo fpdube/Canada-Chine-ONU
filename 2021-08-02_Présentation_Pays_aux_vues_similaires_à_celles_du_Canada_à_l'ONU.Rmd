@@ -440,7 +440,7 @@ La position canadienne sur le Moyen-Orient et les droits de la personne est alig
 ----------------------------------------
 ```{r, boxplot_canada_près_du_groupe3, echo=FALSE, message=FALSE, fig.width=10.5}
 patchwork::wrap_plots(graphes_boxplot[c(2, 5, 6)], ncol = 3) + plot_layout(guides = "collect") 
-```
+``` 
 
 Conclusions
 ============
