@@ -8,10 +8,10 @@ munging: FALSE
 logging: FALSE
 logging_level: INFO
 load_libraries: TRUE
-libraries: mclust, tidyverse, lubridate, wbstats, countrycode,
-       gghighlight, ggthemes, patchwork, corrr, tidyselect, 
+libraries: mclust, tidyverse, lubridate, wbstats, countrycode, ggforce, 
+       broom, gghighlight, ggthemes, patchwork, corrr, tidyselect, 
        rnaturalearth, sf
-as_factors: FALSE
+as_factors: FALSE 
 tables_type: tibble
 attach_internal_libraries: TRUE
 cache_loaded_data: TRUE
